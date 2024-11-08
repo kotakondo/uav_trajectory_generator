@@ -8,6 +8,8 @@
 #pragma once
 
 #include "trajectory_generator/trajectories/Trajectory.hpp"
+#include "rclcpp/logger.h"
+#include "rclcpp/logging.h"
 
 namespace trajectory_generator {
 
@@ -25,12 +27,12 @@ public:
 
     virtual ~Circle(){}
 
-    void generateTraj(std::vector<snapstack_msgs::Goal>& goals,
+    void generateTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
                       std::unordered_map<int,std::string>& index_msgs) override;  // generates the circles
 
-    snapstack_msgs::Goal createCircleGoal(double v, double accel, double theta) const;
+    snapstack_msgs::msg::Goal createCircleGoal(double v, double accel, double theta) const;
 
-    void generateStopTraj(std::vector<snapstack_msgs::Goal>& goals,
+    void generateStopTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
                                       std::unordered_map<int,std::string>& index_msgs,
                                       int& pub_index) override;
 
@@ -46,6 +48,8 @@ private:
     std::vector<double> v_goals_;  // norm of goal velocities
     double t_traj_;  // time to follow each trajectory, s
     double accel_;  // max acceleration allowed
+
+    rclcpp::Logger logger_ = rclcpp::get_logger("circle_logger");
 };
 
 } /* namespace */

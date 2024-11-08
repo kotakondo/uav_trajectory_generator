@@ -9,9 +9,9 @@
 
 namespace trajectory_generator {
 
-void Line::generateTraj(std::vector<snapstack_msgs::Goal>& goals,
+void Line::generateTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
                         std::unordered_map<int,std::string>& index_msgs){
-    ros::Time tstart = ros::Time::now();
+    rclcpp::Time tstart = rclcpp::Time::now();
 
     // init pos: A_
     double v = 0;
@@ -48,12 +48,12 @@ void Line::generateTraj(std::vector<snapstack_msgs::Goal>& goals,
 
     // we reached zero velocity
     double thresh = 0.05;
-    //ROS_INFO_STREAM("Final point in goals is (" << goals.back().p.x << ", " << goals.back().p.y << ")");
+    //RCLCPP_INFO(logger_, "Final point in goals is (" << goals.back().p.x << ", " << goals.back().p.y << ")");
     //for(auto goal : goals){
     //    std::cout << "(" << goal.p.x << ", " << goal.p.y << ")" << std::endl;
     //}
     if(fabs(B_.x() - goals.back().p.x) > thresh or fabs(B_.y() - goals.back().p.y) > thresh){
-        ROS_ERROR("Error: final point is not B");
+        RCLCPP_ERROR(logger_, "Error: final point is not B");
         exit(1);
     }
     // Force last goal pos to be equal to B
@@ -62,16 +62,16 @@ void Line::generateTraj(std::vector<snapstack_msgs::Goal>& goals,
 
     index_msgs[goals.size() - 1] = "Line traj: stopped";
 
-    ROS_INFO("Time to calculate the traj (s): %f", (ros::Time::now() - tstart).toSec());
-    ROS_INFO("Goal vector size = %lu", goals.size());
+    RCLCPP_INFO(logger_, "Time to calculate the traj (s): %f", (rclcpp::Time::now() - tstart).toSec());
+    RCLCPP_INFO(logger_, "Goal vector size = %lu", goals.size());
 }
 
-snapstack_msgs::Goal Line::createLineGoal(double last_x, double last_y, double v, double accel, double theta) const{
+snapstack_msgs::msg::Goal Line::createLineGoal(double last_x, double last_y, double v, double accel, double theta) const{
     // from A to B: theta. From B to A: call with theta + M_PI
     double s = sin(theta);
     double c = cos(theta);
 
-    snapstack_msgs::Goal goal;
+    snapstack_msgs::msg::Goal goal;
     goal.header.frame_id = "world";
     goal.p.x   = last_x + v*c*dt_;
     goal.p.y   = last_y + v*s*dt_;
@@ -92,17 +92,17 @@ snapstack_msgs::Goal Line::createLineGoal(double last_x, double last_y, double v
     return goal;
 }
 
-void Line::generateStopTraj(std::vector<snapstack_msgs::Goal>& goals,
+void Line::generateStopTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
                             std::unordered_map<int,std::string>& index_msgs,
                             int& pub_index){
-    ros::Time tstart = ros::Time::now();
+    rclcpp::Time tstart = rclcpp::Time::now();
 
     double v = sqrt(pow(goals[pub_index].v.x, 2) +
                     pow(goals[pub_index].v.y, 2));  // 2D current (goal) vel
     double theta = atan2(goals[pub_index].v.y,
                          goals[pub_index].v.x);  // current yaw
 
-    std::vector<snapstack_msgs::Goal> goals_tmp;
+    std::vector<snapstack_msgs::msg::Goal> goals_tmp;
     std::unordered_map<int,std::string> index_msgs_tmp;
 
     index_msgs_tmp[0] = "Line traj: pressed END, decelerating to 0 m/s";
@@ -122,8 +122,8 @@ void Line::generateStopTraj(std::vector<snapstack_msgs::Goal>& goals,
     index_msgs = std::move(index_msgs_tmp);
     pub_index = 0;
 
-    ROS_INFO("Time to calculate the braking traj (s): %f", (ros::Time::now() - tstart).toSec());
-    ROS_INFO("Goal vector size = %lu", goals.size());
+    RCLCPP_INFO(logger_, "Time to calculate the braking traj (s): %f", (rclcpp::Time::now() - tstart).toSec());
+    RCLCPP_INFO(logger_, "Goal vector size = %lu", goals.size());
 }
 
 bool Line::trajectoryInsideBounds(double xmin, double xmax,
@@ -134,11 +134,11 @@ bool Line::trajectoryInsideBounds(double xmin, double xmax,
 
     double d2 = get_d2();
     double t2 = d2 / vg;
-    ROS_INFO_STREAM("Line length: " << d << "m");
-    ROS_INFO_STREAM("Constant velocity segment length: " << d2 << "m");
-    ROS_INFO_STREAM("Constant velocity segment time: " << t2 << "s");
+    RCLCPP_INFO(logger_, "Line length: " << d << "m");
+    RCLCPP_INFO(logger_, "Constant velocity segment length: " << d2 << "m");
+    RCLCPP_INFO(logger_, "Constant velocity segment time: " << t2 << "s");
     if(d2 < 0){
-        ROS_ERROR("Line trajectory not feasible. Please increase accel, decrease v, or increase line length.");
+        RCLCPP_ERROR(logger_, "Line trajectory not feasible. Please increase accel, decrease v, or increase line length.");
         return false;
     }
 

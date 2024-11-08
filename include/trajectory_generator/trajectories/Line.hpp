@@ -8,6 +8,8 @@
 #pragma once
 
 #include "trajectory_generator/trajectories/Trajectory.hpp"
+#include "rclcpp/logger.h"
+#include "rclcpp/logging.h"
 
 namespace trajectory_generator {
 
@@ -26,12 +28,12 @@ public:
 
     virtual ~Line(){}
 
-    void generateTraj(std::vector<snapstack_msgs::Goal>& goals,
+    void generateTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
                       std::unordered_map<int,std::string>& index_msgs) override;
-    snapstack_msgs::Goal createLineGoal (double last_x, double last_y,
+    snapstack_msgs::msg::Goal createLineGoal (double last_x, double last_y,
                                              double v, double accel, double theta) const;
 
-    void generateStopTraj(std::vector<snapstack_msgs::Goal>& goals,
+    void generateStopTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
                           std::unordered_map<int,std::string>& index_msgs,
                           int& pub_index) override;
 
@@ -51,6 +53,8 @@ private:
     // note that both are > 0 even though a3_ represents a deceleration
 
     double theta_;  // angle from line AB to x axis, precalculated for efficiency
+
+    rclcpp::Logger logger_ = rclcpp::get_logger("line_logger");
 };
 
 } /* namespace */

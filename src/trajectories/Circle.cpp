@@ -7,12 +7,14 @@
 
 #include "trajectory_generator/trajectories/Circle.hpp"
 
+
 namespace trajectory_generator {
 
-void Circle::generateTraj(std::vector<snapstack_msgs::Goal>& goals,
+void Circle::generateTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
                           std::unordered_map<int,std::string>& index_msgs)
 {
-    ros::Time tstart = ros::Time::now();
+    rclcpp::Time tstart = rclcpp::Time::now();
+
     // init pos
     double theta = 0;
     double v = 0;
@@ -34,7 +36,7 @@ void Circle::generateTraj(std::vector<snapstack_msgs::Goal>& goals,
 
         // we reached v_goal, continue the traj for t_traj_ seconds
         if(fabs(v - v_goal) > 0.001){
-            ROS_WARN("Vels are not in increasing order, ignoring vels from the first to decrease...");
+            RCLCPP_WARN(logger_, "Vels are not in increasing order, ignoring vels from the first to decrease...");
         }
 
         index_msgs[goals.size() - 1] = "Circle traj: reached " + std::to_string(v_goal)
@@ -62,16 +64,16 @@ void Circle::generateTraj(std::vector<snapstack_msgs::Goal>& goals,
 
     // we reached zero velocity
     if(fabs(v) > 0.001){
-        ROS_ERROR("Error: final velocity is not zero");
+        RCLCPP_ERROR(logger_, "Error: final velocity is not zero");
         exit(1);
     }
     index_msgs[goals.size() - 1] = "Circle traj: stopped";
 
-    ROS_INFO("Time to calculate the traj (s): %f", (ros::Time::now() - tstart).toSec());
-    ROS_INFO("Goal vector size = %lu", goals.size());
+    RCLCPP_INFO(logger_, "Time to calculate the traj (s): %f", (rclcpp::Time::now() - tstart).toSec());
+    RCLCPP_INFO(logger_, "Goal vector size = %lu", goals.size());
 }
 
-snapstack_msgs::Goal Circle::createCircleGoal(double v, double accel, double theta) const{
+snapstack_msgs::msg::Goal Circle::createCircleGoal(double v, double accel, double theta) const{
     // TODO: return ref to goal to avoid copy? Same for the simpleInterpolation function
     double s = sin(theta);
     double c = cos(theta);
@@ -80,7 +82,7 @@ snapstack_msgs::Goal Circle::createCircleGoal(double v, double accel, double the
     double v4r3 = pow(v,4)/pow(r_,3);
     double omega = v/r_;
 
-    snapstack_msgs::Goal goal;
+    snapstack_msgs::msg::Goal goal;
     goal.header.frame_id = "world";
     goal.p.x   = cx_ + r_*c;
     goal.p.y   = cy_ + r_*s;
@@ -107,18 +109,18 @@ snapstack_msgs::Goal Circle::createCircleGoal(double v, double accel, double the
     return goal;
 }
 
-void Circle::generateStopTraj(std::vector<snapstack_msgs::Goal>& goals,
+void Circle::generateStopTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
                               std::unordered_map<int,std::string>& index_msgs,
                               int& pub_index){
 
-    ros::Time tstart = ros::Time::now();
+    rclcpp::Time tstart = rclcpp::Time::now();
 
     double v = sqrt(pow(goals[pub_index].v.x, 2) +
                     pow(goals[pub_index].v.y, 2));  // 2D current (goal) vel
     double theta = atan2(goals[pub_index].p.y - cy_,
                          goals[pub_index].p.x - cx_);  // current (goal) angle wrt the center
 
-    std::vector<snapstack_msgs::Goal> goals_tmp;
+    std::vector<snapstack_msgs::msg::Goal> goals_tmp;
     std::unordered_map<int,std::string> index_msgs_tmp;
 
     index_msgs_tmp[0] = "Circle traj: pressed END, decelerating to 0 m/s";
@@ -139,8 +141,8 @@ void Circle::generateStopTraj(std::vector<snapstack_msgs::Goal>& goals,
     index_msgs = std::move(index_msgs_tmp);
     pub_index = 0;
 
-    ROS_INFO("Time to calculate the braking traj (s): %f", (ros::Time::now() - tstart).toSec());
-    ROS_INFO("Goal vector size = %lu", goals.size());
+    RCLCPP_INFO(logger_, "Time to calculate the braking traj (s): %f", (rclcpp::Time::now() - tstart).toSec());
+    RCLCPP_INFO(logger_, "Goal vector size = %lu", goals.size());
 }
 
 bool Circle::trajectoryInsideBounds(double xmin, double xmax,

@@ -2,7 +2,9 @@
 <launch>
 
   <!-- Launching outside vehicle ns to ensure correct goal message type.  -->
-  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find trajectory_generator)/config/default.rviz" />
+  <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen"> 
+    <param from="$(find trajectory_generator)/config/default.rviz" />
+  </node>
 
   <!-- Launch base station flight mode GUI -->
   <include file="$(find behavior_selector)/launch/gui.launch" />

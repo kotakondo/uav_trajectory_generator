@@ -3,10 +3,11 @@
   <arg name="veh" default="$(optenv VEHTYPE SQ)" />
   <arg name="num" default="$(optenv VEHNUM 01)" />
 
-  <group ns="$(arg veh)$(arg num)">
+  <group>
+    <push_ros_namespace namespace="$(arg veh)$(arg num)">
     <!-- Launch ROS Trajectory Generator Node -->
-    <node pkg="trajectory_generator" type="trajectory_generator" name="trajectory_generator" output="screen" clear_params="true">
-      <rosparam command="load" file="$(find trajectory_generator)/config/default.yaml"/>
+    <node pkg="trajectory_generator" exec="trajectory_generator" name="trajectory_generator" output="screen" clear_params="true">
+      <param from="$(find trajectory_generator)/config/default.yaml"/>
     </node>
   </group>
 
