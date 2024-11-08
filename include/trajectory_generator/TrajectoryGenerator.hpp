@@ -8,23 +8,30 @@
 #pragma once
 
 #include <vector>
+#include <chrono>
+#include <functional>
+#include <memory>
+#include <string>
 
 #include "trajectory_generator/trajectories/Trajectory.hpp"
 
 // ROS
 #include <ros/ros.h>
-#include <snapstack_msgs/Goal.h>
-#include <snapstack_msgs/QuadFlightMode.h>
-#include <snapstack_msgs/State.h>
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/Quaternion.h>
+#include <snapstack_msgs/msg/goal.h>
+// #include <snapstack_msgs/msg/QuadFlightMode.h>
+#include <snapstack_msgs/msg/quad_flight_mode.h>
+#include <snapstack_msgs/msg/state.h>
+#include <geometry_msgs/msg/pose.h>
+#include <geometry_msgs/msg/quaternion.h>
 
 namespace trajectory_generator {
 
 /*!
  * Main class for the node to handle the ROS interfacing.
  */
-class TrajectoryGenerator
+
+// Inherit rclcpp Node class
+class TrajectoryGenerator : public rclcpp::Node
 {
 public:
     /*!

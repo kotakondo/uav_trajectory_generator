@@ -8,11 +8,16 @@
   <url type="website">https://gitlab.com/mit-acl/fsw/trajectory_generator</url>
   <author email="aleix@mit.edu">Aleix Paris</author>
   
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>ament_cmake_ros</buildtool_depend>
+  <!-- <buildtool_depend>ament_cmake</buildtool_depend> -->
   
   <depend>eigen</depend>
   <!--<depend>boost</depend>-->
-  <depend>roscpp</depend>
+  <depend>rclcpp</depend>
   <depend>snapstack_msgs</depend>
   <depend>geometry_msgs</depend>
+
+  <expoert>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>

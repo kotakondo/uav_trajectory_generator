@@ -16,37 +16,38 @@
 
 namespace trajectory_generator {
 
-TrajectoryGenerator::TrajectoryGenerator(const ros::NodeHandle& nh, const ros::NodeHandle& nhp)
-    : nh_(nh), nhp_(nhp)
+TrajectoryGenerator::TrajectoryGenerator()
+    : Node("trajectory_generator")
 {
     if (!readParameters()) {
-        ROS_ERROR("Could not read parameters.");
-        ros::requestShutdown();
+        RCLCPP_ERROR(this->get_logger(), "Could not read parameters.");
+        rclcpp::shutdown();
     }
 
     // Check namespace to find name of vehicle
-    veh_name_ = ros::this_node::getNamespace();
+    veh_name_ = this->get_namespace();
     size_t n = veh_name_.find_first_not_of('/');
     veh_name_.erase(0, n); // remove leading slashes
     if (veh_name_.empty()) {
-      ROS_ERROR("Error :: You should be using a launch file to specify the "
+      RCLCPP_ERROR(this->get_logger(), "Error :: You should be using a launch file to specify the "
                 "node namespace!\n");
-      ros::shutdown();
+      rclcpp::shutdown();
       return;
     }
-    ROS_INFO_STREAM("veh_name_ = " << veh_name_);
+    RCLCPP_INFO(this->get_logger(), "veh_name_ = %s", veh_name_.c_str());
 
     traj_->generateTraj(traj_goals_full_, index_msgs_full_);
     traj_goals_ = traj_goals_full_;
     index_msgs_ = index_msgs_full_;
 
-    subs_mode_ = nh_.subscribe("/globalflightmode", 1, &TrajectoryGenerator::modeCB, this);
-    subs_state_ = nh_.subscribe("state", 1, &TrajectoryGenerator::stateCB, this);
-    pub_timer_ = nh_.createTimer(ros::Duration(dt_),
-                                         &TrajectoryGenerator::pubCB, this);
-    pub_goal_  = nh_.advertise<snapstack_msgs::Goal>("goal", 1, false);  // topic, queue_size, latch
+    subs_mode_ = this->create_subscription<snapstack_msgs::msg::QuadFlightMode>("/globalflightmode", 1, std::bind(&TrajectoryGenerator::modeCB, this));
+    subs_state_ = this->create_subscription<snapstack_msgs::msg::State>("state", 1, std::bind(&TrajectoryGenerator::stateCB, this));
+    pub_timer_ = this->create_wall_timer(
+        chrono::duration<double>(dt_), 
+        std::bind(&TrajectoryGenerator::pubCB, this));
+    pub_goal_  = this->create_publisher<snapstack_msgs::msg::goal>("goal", 1, false);  // topic, queue_size, latch
 
-    ros::Duration(1.0).sleep();  // to ensure that the state has been received
+    rclcpp::Duration(1.0).sleep();  // to ensure that the state has been received
 
     flight_mode_ = GROUND;
 
@@ -56,7 +57,7 @@ TrajectoryGenerator::TrajectoryGenerator(const ros::NodeHandle& nh, const ros::N
     goal_.p.y = pose_.position.y;
     goal_.p.z = pose_.position.z;
 
-    ROS_INFO("Successfully launched trajectory generator node.");
+    RCLCPP_INFO(this->get_logger(), "Successfully launched trajectory generator node.");
 }
 
 TrajectoryGenerator::~TrajectoryGenerator()
@@ -66,32 +67,32 @@ TrajectoryGenerator::~TrajectoryGenerator()
 bool TrajectoryGenerator::readParameters()
 {
  
-    if (!nhp_.getParam("alt", alt_)) return false;
+    if (!this->get_parameter("alt", alt_)) return false;
     double freq;
   
-    if (!nhp_.getParam("pub_freq", freq)) return false;
+    if (!this->get_parameter("pub_freq", freq)) return false;
     dt_ = 1.0/freq;
  
     std::string traj_type;
-    if (!nhp_.getParam("traj_type", traj_type)) return false;
+    if (!this->get_parameter("traj_type", traj_type)) return false;
     if(traj_type == "Circle"){
         // circular trajectory parameters
         double r, cx, cy, t_traj, circle_accel;
         std::vector<double> v_goals;
-        if (!nhp_.getParam("r", r)) return false;
-        if (!nhp_.getParam("center_x", cx)) return false;
-        if (!nhp_.getParam("center_y", cy)) return false;
-        if (!nhp_.getParam("v_goals", v_goals)) return false;
+        if (!this->get_parameter("r", r)) return false;
+        if (!this->get_parameter("center_x", cx)) return false;
+        if (!this->get_parameter("center_y", cy)) return false;
+        if (!this->get_parameter("v_goals", v_goals)) return false;
         for(double vel : v_goals){
             if(vel <= 0){
-                ROS_ERROR("All velocities must be > 0");
+                RCLCPP_ERROR(this->get_logger(), "All velocities must be > 0");
                 return false;
             }
         }
-        if (!nhp_.getParam("t_traj", t_traj)) return false;
-        if (!nhp_.getParam("circle_accel", circle_accel)) return false;
+        if (!this->get_parameter("t_traj", t_traj)) return false;
+        if (!this->get_parameter("circle_accel", circle_accel)) return false;
         if (circle_accel <= 0){
-            ROS_ERROR("accel must be > 0");
+            RCLCPP_ERROR(this->get_logger(), "accel must be > 0");
             return false;
         }
         traj_ = std::make_unique<Circle>(alt_, r, cx, cy, v_goals, t_traj, circle_accel, dt_);
@@ -99,21 +100,21 @@ bool TrajectoryGenerator::readParameters()
     else if(traj_type == "Line"){
         // line trajectory parameters
         double Ax, Ay, Bx, By, v_line, a1, a3;
-        if (!nhp_.getParam("Ax", Ax)) return false;
-        if (!nhp_.getParam("Ay", Ay)) return false;
-        if (!nhp_.getParam("Bx", Bx)) return false;
-        if (!nhp_.getParam("By", By)) return false;
-        if (!nhp_.getParam("v_line", v_line)) return false;
+        if (!this->get_parameter("Ax", Ax)) return false;
+        if (!this->get_parameter("Ay", Ay)) return false;
+        if (!this->get_parameter("Bx", Bx)) return false;
+        if (!this->get_parameter("By", By)) return false;
+        if (!this->get_parameter("v_line", v_line)) return false;
         if(v_line <= 0){
-            ROS_ERROR("The velocity must be > 0");
+            RCLCPP_ERROR(this->get_logger(), "The velocity must be > 0");
             return false;
         }
-        if (!nhp_.getParam("By", By)) return false;
-        if (!nhp_.getParam("By", By)) return false;
-        if (!nhp_.getParam("line_accel", a1)) return false;
-        if (!nhp_.getParam("line_decel", a3)) return false;
+        if (!this->get_parameter("By", By)) return false;
+        if (!this->get_parameter("By", By)) return false;
+        if (!this->get_parameter("line_accel", a1)) return false;
+        if (!this->get_parameter("line_decel", a3)) return false;
         if (a1 <= 0 or a3 <= 0){
-            ROS_ERROR("accel and decel must be > 0");
+            RCLCPP_ERROR(this->get_logger(), "accel and decel must be > 0");
             return false;
         }
         std::vector<double> v_goals; v_goals.push_back(v_line);
@@ -122,40 +123,40 @@ bool TrajectoryGenerator::readParameters()
                                        v_goals, a1, a3, dt_);
     }
     else{
-        ROS_ERROR("Trajectory type not valid.");
+        RCLCPP_ERROR(this->get_logger(), "Trajectory type not valid.");
         return false;
     }
 
     // other params
-    if (!nhp_.getParam("vel_initpos", vel_initpos_)) return false;
-    if (!nhp_.getParam("vel_take", vel_take_)) return false;
-    if (!nhp_.getParam("vel_land_fast", vel_land_fast_)) return false;
-    if (!nhp_.getParam("vel_land_slow", vel_land_slow_)) return false;
-    if (!nhp_.getParam("vel_yaw", vel_yaw_)) return false;
+    if (!this->get_parameter("vel_initpos", vel_initpos_)) return false;
+    if (!this->get_parameter("vel_take", vel_take_)) return false;
+    if (!this->get_parameter("vel_land_fast", vel_land_fast_)) return false;
+    if (!this->get_parameter("vel_land_slow", vel_land_slow_)) return false;
+    if (!this->get_parameter("vel_yaw", vel_yaw_)) return false;
 
-    if (!nhp_.getParam("dist_thresh", dist_thresh_)) return false;
-    if (!nhp_.getParam("yaw_thresh", yaw_thresh_)) return false;
+    if (!this->get_parameter("dist_thresh", dist_thresh_)) return false;
+    if (!this->get_parameter("yaw_thresh", yaw_thresh_)) return false;
 
-    if (!nhp_.getParam("margin_takeoff_outside_bounds", margin_takeoff_outside_bounds_)) return false;
+    if (!this->get_parameter("margin_takeoff_outside_bounds", margin_takeoff_outside_bounds_)) return false;
     
     // bounds
-    // if (!nhp_.getParam("/room_bounds/x_min", xmin_)) return false;
-    // if (!nhp_.getParam("/room_bounds/x_max", xmax_)) return false;
-    // if (!nhp_.getParam("/room_bounds/y_min", ymin_)) return false;
-    // if (!nhp_.getParam("/room_bounds/y_max", ymax_)) return false;
-    // if (!nhp_.getParam("/room_bounds/z_min", zmin_)) return false;
-    // if (!nhp_.getParam("/room_bounds/z_max", zmax_)) return false;
+    // if (!this->get_parameter("/room_bounds/x_min", xmin_)) return false;
+    // if (!this->get_parameter("/room_bounds/x_max", xmax_)) return false;
+    // if (!this->get_parameter("/room_bounds/y_min", ymin_)) return false;
+    // if (!this->get_parameter("/room_bounds/y_max", ymax_)) return false;
+    // if (!this->get_parameter("/room_bounds/z_min", zmin_)) return false;
+    // if (!this->get_parameter("/room_bounds/z_max", zmax_)) return false;
 
     //bounds
-    if (!nhp_.getParam("x_min", xmin_)) return false;
-    if (!nhp_.getParam("x_max", xmax_)) return false;
-    if (!nhp_.getParam("y_min", ymin_)) return false;
-    if (!nhp_.getParam("y_max", ymax_)) return false;
-    if (!nhp_.getParam("z_min", zmin_)) return false;
-    if (!nhp_.getParam("z_max", zmax_)) return false;
+    if (!this->get_parameter("x_min", xmin_)) return false;
+    if (!this->get_parameter("x_max", xmax_)) return false;
+    if (!this->get_parameter("y_min", ymin_)) return false;
+    if (!this->get_parameter("y_max", ymax_)) return false;
+    if (!this->get_parameter("z_min", zmin_)) return false;
+    if (!this->get_parameter("z_max", zmax_)) return false;
     // check that the trajectory params don't conflict with the bounds
     if(!traj_->trajectoryInsideBounds(xmin_, xmax_, ymin_, ymax_, zmin_, zmax_)){
-        ROS_ERROR("TheF trajectory parameters conflict with the room bounds.");
+        RCLCPP_ERROR(this->get_logger(), "TheF trajectory parameters conflict with the room bounds.");
         return false;
     }
 
@@ -178,11 +179,11 @@ void TrajectoryGenerator::modeCB(const snapstack_msgs::QuadFlightMode& msg){
     // ESTOP -> KILL (6)
     if(msg.mode == msg.KILL){
         goal_.power = false;
-        goal_.header.stamp = ros::Time::now();
+        goal_.header.stamp = rclcpp::Time::now();
         pub_goal_.publish(goal_);
         flight_mode_ = GROUND;
         resetGoal();
-        ROS_INFO("Motors killed, switched to GROUND mode.");
+        RCLCPP_INFO(this->get_logger(), "Motors killed, switched to GROUND mode.");
         return;
     }
     else if(flight_mode_ == GROUND and msg.mode == msg.GO){
@@ -193,7 +194,7 @@ void TrajectoryGenerator::modeCB(const snapstack_msgs::QuadFlightMode& msg){
         double ymax = ymax_ + margin_takeoff_outside_bounds_;
         if(pose_.position.x < xmin or pose_.position.x > xmax or
            pose_.position.y < ymin or pose_.position.y > ymax){
-            ROS_WARN("Can't take off: the vehicle is outside the safety bounds.");
+            RCLCPP_WARN(this->get_logger(), "Can't take off: the vehicle is outside the safety bounds.");
             return;
         }
 
@@ -210,7 +211,7 @@ void TrajectoryGenerator::modeCB(const snapstack_msgs::QuadFlightMode& msg){
 
         // Take off
         flight_mode_ = TAKING_OFF;
-        ROS_INFO("Taking off...");
+        RCLCPP_INFO(this->get_logger(), "Taking off...");
         // then it will switch automatically to HOVERING
 
         // switch on motors after flight_mode changes, to avoid timer callback setting power to false
@@ -220,7 +221,7 @@ void TrajectoryGenerator::modeCB(const snapstack_msgs::QuadFlightMode& msg){
         traj_goals_ = traj_goals_full_;
         index_msgs_ = index_msgs_full_;
         flight_mode_ = INIT_POS_TRAJ;
-        ROS_INFO("Going to the initial position of the generated trajectory...");
+        RCLCPP_INFO(this->get_logger(), "Going to the initial position of the generated trajectory...");
     }
     else if(flight_mode_ == INIT_POS_TRAJ and msg.mode == msg.GO){
         // Start following the generated trajectory if close to the init pos (in 2D)
@@ -229,12 +230,12 @@ void TrajectoryGenerator::modeCB(const snapstack_msgs::QuadFlightMode& msg){
         double delta_yaw = traj_goals_[0].psi - quat2yaw(pose_.orientation);
         delta_yaw = wrap(delta_yaw);
         if(dist_to_init > dist_thresh_ or fabs(delta_yaw) > yaw_thresh_){
-            ROS_INFO("Can't switch to the generated trajectory following mode, too far from the init pos");
+            RCLCPP_INFO(this->get_logger(), "Can't switch to the generated trajectory following mode, too far from the init pos");
             return;
         }
         pub_index_ = 0;
         flight_mode_ = TRAJ_FOLLOWING;
-        ROS_INFO("Following the generated trajectory...");
+        RCLCPP_INFO(this->get_logger(), "Following the generated trajectory...");
     }
     else if(flight_mode_ == INIT_POS_TRAJ and msg.mode == msg.LAND){
         // Change mode to hover wherever the robot was when we clicked "END"
@@ -244,10 +245,10 @@ void TrajectoryGenerator::modeCB(const snapstack_msgs::QuadFlightMode& msg){
         goal_.p.y = pose_.position.y;
         goal_.p.z = alt_;
         goal_.psi = quat2yaw(pose_.orientation);
-        goal_.header.stamp = ros::Time::now();
+        goal_.header.stamp = rclcpp::Time::now();
         pub_goal_.publish(goal_);
         flight_mode_ = HOVERING;
-        ROS_INFO("Switched to HOVERING mode");
+        RCLCPP_INFO(this->get_logger(), "Switched to HOVERING mode");
     }
     else if(flight_mode_ == TRAJ_FOLLOWING and msg.mode == msg.LAND){
         // Generate a braking trajectory. Then, we will automatically switch to hover when done
@@ -256,11 +257,11 @@ void TrajectoryGenerator::modeCB(const snapstack_msgs::QuadFlightMode& msg){
     else if(flight_mode_ == HOVERING and msg.mode == msg.LAND){
         //go to the initial position
         flight_mode_ = INIT_POS;
-        ROS_INFO("Switched to INIT_POS mode");
+        RCLCPP_INFO(this->get_logger(), "Switched to INIT_POS mode");
     }
 }
 
-void TrajectoryGenerator::pubCB(const ros::TimerEvent& event){
+void TrajectoryGenerator::pubCB(const rclcpp::TimerEvent& event){
     // Always publish a goal to avoid ramps in comm_monitor
     if(flight_mode_ == GROUND)
         goal_.power = false;  // not needed but just in case, for safety
@@ -273,7 +274,7 @@ void TrajectoryGenerator::pubCB(const ros::TimerEvent& event){
         // if close to the takeoff_alt, switch to HOVERING
         if(fabs(takeoff_alt - pose_.position.z) < 0.10 and goal_.p.z >= takeoff_alt){
             flight_mode_ = HOVERING;
-            ROS_INFO("Take off completed");
+            RCLCPP_INFO(this->get_logger(), "Take off completed");
         }
         else{
             // Increment the z cmd each timestep for a smooth takeoff.
@@ -291,7 +292,7 @@ void TrajectoryGenerator::pubCB(const ros::TimerEvent& event){
     else if(flight_mode_ == TRAJ_FOLLOWING){
         goal_ = traj_goals_[pub_index_];
         if(index_msgs_.find(pub_index_) != index_msgs_.end()){
-            ROS_INFO("%s", index_msgs_[pub_index_].c_str());
+            RCLCPP_INFO(this->get_logger(), "%s", index_msgs_[pub_index_].c_str());
         }
         ++pub_index_;
         if(pub_index_ == traj_goals_.size()){
@@ -303,7 +304,7 @@ void TrajectoryGenerator::pubCB(const ros::TimerEvent& event){
             goal_.psi = quat2yaw(pose_.orientation);
             pub_goal_.publish(goal_);
             flight_mode_ = HOVERING;
-            ROS_INFO("Trajectory finished. Switched to HOVERING mode");
+            RCLCPP_INFO(this->get_logger(), "Trajectory finished. Switched to HOVERING mode");
         }
     }
     else if(flight_mode_ == INIT_POS){
@@ -315,7 +316,7 @@ void TrajectoryGenerator::pubCB(const ros::TimerEvent& event){
                                     dist_thresh_, yaw_thresh_, dt_, finished);
         if(finished){ // land when close to the init pos
             flight_mode_ = LANDING;
-            ROS_INFO("Landing...");
+            RCLCPP_INFO(this->get_logger(), "Landing...");
         }
     }
     // if landing, decrease alt until we reach ground (and switch to ground)
@@ -329,7 +330,7 @@ void TrajectoryGenerator::pubCB(const ros::TimerEvent& event){
             // landed, kill motors
             goal_.power = false;
             flight_mode_ = GROUND;
-            ROS_INFO("Landed");
+            RCLCPP_INFO(this->get_logger(), "Landed");
         }
     }
 
@@ -338,7 +339,7 @@ void TrajectoryGenerator::pubCB(const ros::TimerEvent& event){
     goal_.p.y = saturate(goal_.p.y, ymin_, ymax_);
     goal_.p.z = saturate(goal_.p.z, zmin_, zmax_);
 
-    goal_.header.stamp = ros::Time::now(); // set current time
+    goal_.header.stamp = rclcpp::Time::now(); // set current time
 
     // Goals should only be published here because this is the only place where we
     // apply safety bounds. Exceptions: when killing the drone and when clicking END at init pos traj

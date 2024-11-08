@@ -5,15 +5,13 @@
  * @date 2020-01-08
  */
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.h>
 #include "trajectory_generator/TrajectoryGenerator.hpp"
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "trajectory_generator");
-    ros::NodeHandle nhtopics("");
-    ros::NodeHandle nhparams("~");
-    trajectory_generator::TrajectoryGenerator trajectoryGenerator(nhtopics, nhparams);
-    ros::spin();
+    rclcpp::init(argc, argv);
+    trajectory_generator::TrajectoryGenerator TrajectoryGenerator();
+    rclcpp::spin();
     return 0;
 }

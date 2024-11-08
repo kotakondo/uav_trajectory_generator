@@ -1,34 +1,42 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.14.4)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")
 project(trajectory_generator)
 
 add_compile_options("-O3")
 
 # check c++14 / c++0x
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
-if(COMPILER_SUPPORTS_CXX14)
-    set(CMAKE_CXX_FLAGS "-std=c++14")
-else()
-    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++14 support.")
+# include(CheckCXXCompilerFlag)
+# CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
+# if(COMPILER_SUPPORTS_CXX14)
+#     set(CMAKE_CXX_FLAGS "-std=c++14")
+# else()
+#     message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++14 support.")
+# endif()
+
+# check c++17
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
 ## By adding -Wall and -Werror, the compiler does not ignore warnings anymore,
 ## enforcing cleaner code.
 #add_definitions(-std=c++11 -Wall -Werror)
 
-if (NOT CMAKE_BUILD_TYPE)
-    # Options: Debug, Release, MinSizeRel, RelWithDebInfo
-    message(STATUS "No build type selected, default to Release")
-    set(CMAKE_BUILD_TYPE "Release")
-endif()
-
-## Find catkin macros and libraries
-find_package(catkin REQUIRED COMPONENTS
-    roscpp
-    snapstack_msgs
-    geometry_msgs
-)
+# ROS1 stuff
+# if (NOT CMAKE_BUILD_TYPE)
+#     # Options: Debug, Release, MinSizeRel, RelWithDebInfo
+#     message(STATUS "No build type selected, default to Release")
+#     set(CMAKE_BUILD_TYPE "Release")
+# endif()
+ 
+# Replace above with:
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(snapstack_msgs REQUIRED)
 
 ## Find system libraries
 find_package(Eigen3 REQUIRED)
@@ -43,31 +51,40 @@ find_package(Eigen3 REQUIRED)
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-  INCLUDE_DIRS
-    include
-    ${EIGEN3_INCLUDE_DIR}
-#  LIBRARIES
-#    ${PROJECT_NAME}_core
-  CATKIN_DEPENDS
-    roscpp
-    snapstack_msgs
-    geometry_msgs
-#  DEPENDS
-#    Boost
-)
+
+###This catkin_package call needs to be replaced with various ament_cmake calls
+# ROS1:
+# catkin_package(
+#   INCLUDE_DIRS
+#     include
+#     ${EIGEN3_INCLUDE_DIR}
+# #  LIBRARIES
+# #    ${PROJECT_NAME}_core
+#   CATKIN_DEPENDS
+#     roscpp
+#     snapstack_msgs
+#     geometry_msgs
+# #  DEPENDS
+# #    Boost
+# )
 
 ###########
 ## Build ##
 ###########
 
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-  ${EIGEN3_INCLUDE_DIR}
-#  ${Boost_INCLUDE_DIRS}
+## Declare cpp executables
+add_executable(${PROJECT_NAME}
+  src/${PROJECT_NAME}_node.cpp
+)
+
+################## Replacing catkin_package() ####################
+
+# ROS2:
+# Replaces INCLUDE_DIRS keyword of catkin_package() call
+target_include_directories(${PROJECT_NAME}
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+  ${EIGEN3_INCLUDE_DIR} 
 )
 
 ## Declare a cpp library
@@ -77,19 +94,10 @@ add_library(${PROJECT_NAME}_core
   src/trajectories/Line.cpp
 )
 
-## Declare cpp executables
-add_executable(${PROJECT_NAME}
-  src/${PROJECT_NAME}_node.cpp
-)
-
-## Add dependencies to exported targets, like ROS msgs or srvs
-#add_dependencies(${PROJECT_NAME}_core
-#  ${catkin_EXPORTED_TARGETS}
-#)
-
-add_dependencies(${PROJECT_NAME}
-  ${catkin_EXPORTED_TARGETS}
-)
+# ROS2: Shouldn't have to do this as ament already handles inter-package dependencies.
+# add_dependencies(${PROJECT_NAME}
+#   ${catkin_EXPORTED_TARGETS}
+# )
 
 ## Specify libraries to link executable targets against
 #target_link_libraries(${PROJECT_NAME}_core
@@ -98,45 +106,43 @@ add_dependencies(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   ${PROJECT_NAME}_core
-  ${catkin_LIBRARIES}
+  ${ament_TARGETS}
+  rclcpp::rclcpp
+  snapstack_msgs::snapstack_msgs 
+  ${geometry_msgs_TARGETS} 
+  ${std_msgs_TARGETS}
 )
 
 #############
 ## Install ##
 #############
 
-# Mark executables and/or libraries for installation
-install(
-  TARGETS ${PROJECT_NAME}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# ROS2:
+# Replaces LIBRARIES keyword from catkin_package()
+# Mark executables and/or libraries for installation 
+install(TARGETS ${PROJECT_NAME} EXPORT export_package
+  ARCHIVE DESTINATION lib 
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME} 
 )
 
-# Mark cpp header files for installation
+# Mark header files for installation 
 install(
   DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  DESTINATION include/${project_name}
   FILES_MATCHING PATTERN "*.hpp"
 )
 
-# Mark other files for installation
-#install(
-#  DIRECTORY doc
-#  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-#)
+# Export for downstream users
+ament_export_targets(export_package) 
 
-#############
-## Testing ##
-#############
+# ROS2: 
+# Replaces CATKIN_DEPENDS keyword from catkin_package()
+ament_export_dependencies(
+  rclcpp 
+  snapstack_msgs 
+  geometry_msgs 
+  std_msgs 
+)
 
-#if(CATKIN_ENABLE_TESTING)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-## Add gtest based cpp test target and link libraries
-#catkin_add_gtest(${PROJECT_NAME}-test
-#  test/test_trajectory_generator.cpp
-#endif()
-
-#if(TARGET ${PROJECT_NAME}-test)
-#  target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME}_core)
-#endif()
+ament_package()
