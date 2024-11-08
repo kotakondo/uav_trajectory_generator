@@ -47,7 +47,7 @@ TrajectoryGenerator::TrajectoryGenerator()
         std::bind(&TrajectoryGenerator::pubCB, this));
     pub_goal_  = this->create_publisher<snapstack_msgs::msg::goal>("goal", 1, false);  // topic, queue_size, latch
 
-    rclcpp::Duration(1.0).sleep();  // to ensure that the state has been received
+    rclcpp::sleep_for(chrono::seconds(1));  // to ensure that the state has been received
 
     flight_mode_ = GROUND;
 
@@ -163,7 +163,7 @@ bool TrajectoryGenerator::readParameters()
     return true;
 }
 
-void TrajectoryGenerator::modeCB(const snapstack_msgs::QuadFlightMode& msg){
+void TrajectoryGenerator::modeCB(const snapstack_msgs::msg::QuadFlightMode& msg){
     // FSM transitions:
     // Any state        --ESTOP--> [kill motors] and switch to ground mode
     // On the ground    --START--> Take off and then hover
@@ -310,7 +310,7 @@ void TrajectoryGenerator::pubCB(const rclcpp::TimerEvent& event){
     else if(flight_mode_ == INIT_POS){
         // go to init_pos_ but with altitude alt_ and current yaw
         bool finished;
-        geometry_msgs::Vector3 dest = init_pos_;
+        geometry_msgs::msg::Vector3 dest = init_pos_;
         dest.z = alt_;
         goal_ = simpleInterpolation(goal_, dest, goal_.psi, vel_initpos_, vel_yaw_,
                                     dist_thresh_, yaw_thresh_, dt_, finished);
@@ -346,7 +346,7 @@ void TrajectoryGenerator::pubCB(const rclcpp::TimerEvent& event){
     pub_goal_.publish(goal_);
 }
 
-void TrajectoryGenerator::stateCB(const snapstack_msgs::State& msg){
+void TrajectoryGenerator::stateCB(const snapstack_msgs::msg::State& msg){
     pose_.position.x = msg.pos.x;
     pose_.position.y = msg.pos.y;
     pose_.position.z = msg.pos.z;
@@ -364,15 +364,15 @@ void TrajectoryGenerator::resetGoal(){
     goal_.psi = quat2yaw(pose_.orientation); goal_.dpsi = 0;
 //    goal_.power = false;
     // reset_xy_int and  reset_z_int are not used
-    goal_.mode_xy = snapstack_msgs::Goal::MODE_POSITION_CONTROL;
-    goal_.mode_z = snapstack_msgs::Goal::MODE_POSITION_CONTROL;
+    goal_.mode_xy = snapstack_msgs::msg::Goal::MODE_POSITION_CONTROL;
+    goal_.mode_z = snapstack_msgs::msg::Goal::MODE_POSITION_CONTROL;
 }
 
 // Utils
-snapstack_msgs::Goal TrajectoryGenerator::simpleInterpolation(const snapstack_msgs::Goal& current,
-        const geometry_msgs::Vector3& dest_pos, double dest_yaw, double vel, double vel_yaw,
+snapstack_msgs::msg::Goal TrajectoryGenerator::simpleInterpolation(const snapstack_msgs::msg::Goal& current,
+        const geometry_msgs::msg::Vector3& dest_pos, double dest_yaw, double vel, double vel_yaw,
         double dist_thresh, double yaw_thresh, double dt, bool& finished){
-    snapstack_msgs::Goal goal;
+    snapstack_msgs::msg::Goal goal;
     // interpolate from current goal pos to the initial goal pos
     double Dx = dest_pos.x - current.p.x;
     double Dy = dest_pos.y - current.p.y;
@@ -434,10 +434,10 @@ snapstack_msgs::Goal TrajectoryGenerator::simpleInterpolation(const snapstack_ms
 }
 
 // for new snapstack messages
-snapstack_msgs::Goal TrajectoryGenerator::simpleInterpolation(const snapstack_msgs::Goal& current,
-        const snapstack_msgs::Goal& dest_pos, double dest_yaw, double vel, double vel_yaw,
+snapstack_msgs::msg::Goal TrajectoryGenerator::simpleInterpolation(const snapstack_msgs::msg::Goal& current,
+        const snapstack_msgs::msg::Goal& dest_pos, double dest_yaw, double vel, double vel_yaw,
         double dist_thresh, double yaw_thresh, double dt, bool& finished){
-    snapstack_msgs::Goal goal;
+    snapstack_msgs::msg::Goal goal;
     // interpolate from current goal pos to the initial goal pos
     double Dx = dest_pos.p.x - current.p.x;
     double Dy = dest_pos.p.y - current.p.y;
@@ -498,7 +498,7 @@ snapstack_msgs::Goal TrajectoryGenerator::simpleInterpolation(const snapstack_ms
     return goal;
 }
 
-double TrajectoryGenerator::quat2yaw(const geometry_msgs::Quaternion& q){
+double TrajectoryGenerator::quat2yaw(const geometry_msgs::msg::Quaternion& q){
     double yaw = atan2(2 * (q.w * q.z + q.x * q.y),
                 1 - 2 * (q.y * q.y + q.z * q.z));
     return yaw;
