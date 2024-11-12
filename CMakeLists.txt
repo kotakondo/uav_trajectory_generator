@@ -129,7 +129,7 @@ install(TARGETS ${PROJECT_NAME} EXPORT export_package
 # Mark header files for installation 
 install(
   DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION include/${project_name}
+  DESTINATION include/${PROJECT_NAME}
   FILES_MATCHING PATTERN "*.hpp"
 )
 
