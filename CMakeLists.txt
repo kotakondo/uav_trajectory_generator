@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14.4)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")
-project(trajectory_generator)
+project(trajectory_generator_ros2)
 
 add_compile_options("-O3")
 
@@ -37,7 +37,7 @@ find_package(ament_cmake)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(snapstack_msgs REQUIRED)
+find_package(snapstack_msgs2 REQUIRED)
 
 ## Find system libraries
 find_package(Eigen3 REQUIRED)
@@ -80,20 +80,22 @@ add_executable(${PROJECT_NAME}
 
 ################## Replacing catkin_package() ####################
 
-# ROS2:
-# Replaces INCLUDE_DIRS keyword of catkin_package() call
-target_include_directories(${PROJECT_NAME}
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
-  ${EIGEN3_INCLUDE_DIR} 
-)
-
 ## Declare a cpp library
 add_library(${PROJECT_NAME}_core
   src/TrajectoryGenerator.cpp
   src/trajectories/Circle.cpp
   src/trajectories/Line.cpp
 )
+
+# ROS2:
+# Replaces INCLUDE_DIRS keyword of catkin_package() call
+target_include_directories(${PROJECT_NAME}_core
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+  ${EIGEN3_INCLUDE_DIR} 
+ )
+  # 
+
 
 # ROS2: Shouldn't have to do this as ament already handles inter-package dependencies.
 # add_dependencies(${PROJECT_NAME}
@@ -109,7 +111,7 @@ target_link_libraries(${PROJECT_NAME}
   ${PROJECT_NAME}_core
   ${ament_TARGETS}
   rclcpp::rclcpp
-  snapstack_msgs::snapstack_msgs 
+  snapstack_msgs2::snapstack_msgs2 
   ${geometry_msgs_TARGETS} 
   ${std_msgs_TARGETS}
 )
@@ -141,7 +143,7 @@ ament_export_targets(export_package)
 # Replaces CATKIN_DEPENDS keyword from catkin_package()
 ament_export_dependencies(
   rclcpp 
-  snapstack_msgs 
+  snapstack_msgs2 
   geometry_msgs 
   std_msgs 
 )

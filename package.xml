@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>trajectory_generator</name>
+  <name>trajectory_generator_ros2</name>
   <version>0.1.0</version>
   <description>Trajectory generator for ACL's snap stack</description>
   <maintainer email="aleix@mit.edu">Aleix Paris</maintainer>
@@ -17,7 +17,7 @@
   <depend>snapstack_msgs</depend>
   <depend>geometry_msgs</depend>
 
-  <expoert>
+  <export>
     <build_type>ament_cmake</build_type>
   </export>
 </package>
