@@ -19,9 +19,11 @@
 namespace trajectory_generator {
 
 void Circle::generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
-                          std::unordered_map<int,std::string>& index_msgs)
+                          std::unordered_map<int,std::string>& index_msgs,
+                          const rclcpp::Clock::SharedPtr& clock)
 {
-    rclcpp::Time tstart = rclcpp::Time::now();
+    // rclcpp::Time tstart = rclcpp::Time::now();
+    rclcpp::Time tstart = clock->now();
 
     // init pos
     double theta = 0;
@@ -77,7 +79,8 @@ void Circle::generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
     }
     index_msgs[goals.size() - 1] = "Circle traj: stopped";
 
-    RCLCPP_INFO(logger_, "Time to calculate the traj (s): %f", (rclcpp::Time::now() - tstart).toSec());
+    // RCLCPP_INFO(logger_, "Time to calculate the traj (s): %f", (rclcpp::Time::now() - tstart).seconds());
+    RCLCPP_INFO(logger_, "Time to calculate the traj (s): %f", (clock->now() - tstart).seconds());
     RCLCPP_INFO(logger_, "Goal vector size = %lu", goals.size());
 }
 
@@ -119,9 +122,11 @@ snapstack_msgs2::msg::Goal Circle::createCircleGoal(double v, double accel, doub
 
 void Circle::generateStopTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                               std::unordered_map<int,std::string>& index_msgs,
-                              int& pub_index){
+                              int& pub_index,
+                              const rclcpp::Clock::SharedPtr& clock){
 
-    rclcpp::Time tstart = rclcpp::Time::now();
+    // rclcpp::Time tstart = rclcpp::Time::now();
+    rclcpp::Time tstart = clock->now();
 
     double v = sqrt(pow(goals[pub_index].v.x, 2) +
                     pow(goals[pub_index].v.y, 2));  // 2D current (goal) vel
@@ -149,7 +154,8 @@ void Circle::generateStopTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
     index_msgs = std::move(index_msgs_tmp);
     pub_index = 0;
 
-    RCLCPP_INFO(logger_, "Time to calculate the braking traj (s): %f", (rclcpp::Time::now() - tstart).toSec());
+    // RCLCPP_INFO(logger_, "Time to calculate the braking traj (s): %f", (rclcpp::Time::now() - tstart).seconds());
+    RCLCPP_INFO(logger_, "Time to calculate the braking traj (s): %f", (clock->now() - tstart).seconds());
     RCLCPP_INFO(logger_, "Goal vector size = %lu", goals.size());
 }
 

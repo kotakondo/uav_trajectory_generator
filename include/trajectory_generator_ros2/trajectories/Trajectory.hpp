@@ -31,12 +31,14 @@ public:
     // Generate the trajectory to be followed
     // It should only be called at init bc it can exit the program
     virtual void generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
-                              std::unordered_map<int,std::string>& index_msgs) = 0;
+                              std::unordered_map<int,std::string>& index_msgs,
+                              const rclcpp::Clock::SharedPtr& clock) = 0;
 
     // Generate a stopping (braking) trajectory
     virtual void generateStopTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                                   std::unordered_map<int,std::string>& index_msgs,
-                                  int& pub_index) = 0;
+                                  int& pub_index,
+                                  const rclcpp::Clock::SharedPtr& clock) = 0;
 
     // Return if the trajectory params conflict with the room bounds
     virtual bool trajectoryInsideBounds(double xmin, double xmax,

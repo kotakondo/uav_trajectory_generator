@@ -17,10 +17,11 @@
 
 // ROS
 #include "rclcpp/rclcpp.hpp"
-#include <snapstack_msgs2/msg/goal.hpp>
+#include "rclcpp/timer.hpp"
+#include "snapstack_msgs2/msg/goal.hpp"
 // #include <snapstack_msgs2/msg/QuadFlightMode.hpp>
-#include <snapstack_msgs2/msg/quad_flight_mode.hpp>
-#include <snapstack_msgs2/msg/state.hpp>
+#include "snapstack_msgs2/msg/quad_flight_mode.hpp"
+#include "snapstack_msgs2/msg/state.hpp"
 
 #include <geometry_msgs/msg/vector3.hpp>
 #include <geometry_msgs/msg/pose.hpp>
@@ -55,7 +56,7 @@ private:
 
     void modeCB(const snapstack_msgs2::msg::QuadFlightMode& msg);
     void stateCB(const snapstack_msgs2::msg::State& msg);
-    void pubCB(const rclcpp::TimerEvent& event);
+    void pubCB();
 
     void resetGoal();
 
@@ -75,7 +76,7 @@ private:
     // ROS
     rclcpp::Subscription<snapstack_msgs2::msg::QuadFlightMode>::SharedPtr subs_mode_;  // "flightmode" Subscription
     rclcpp::Subscription<snapstack_msgs2::msg::State>::SharedPtr subs_state_;  // "state" Subscription
-    rclcpp::Publisher<snapstack_msgs2::msg:Goal>::SharedPtr pub_goal_;  // "goal" publisher
+    rclcpp::Publisher<snapstack_msgs2::msg::Goal>::SharedPtr pub_goal_;  // "goal" publisher
     rclcpp::TimerBase::SharedPtr pub_timer_;  // timer for pub_goal
 
     // Trajectory

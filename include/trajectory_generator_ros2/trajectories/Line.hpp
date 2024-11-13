@@ -36,13 +36,15 @@ public:
     virtual ~Line(){}
 
     void generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
-                      std::unordered_map<int,std::string>& index_msgs) override;
+                      std::unordered_map<int,std::string>& index_msgs,
+                      const rclcpp::Clock::SharedPtr& clock) override;
     snapstack_msgs2::msg::Goal createLineGoal (double last_x, double last_y,
                                              double v, double accel, double theta) const;
 
     void generateStopTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                           std::unordered_map<int,std::string>& index_msgs,
-                          int& pub_index) override;
+                          int& pub_index,
+                          const rclcpp::Clock::SharedPtr& clock) override;
 
     bool trajectoryInsideBounds(double xmin, double xmax,
                                 double ymin, double ymax,

@@ -17,10 +17,13 @@
 #include <Eigen/Core>
 
 namespace trajectory_generator {
+    
 
 void Line::generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
-                        std::unordered_map<int,std::string>& index_msgs){
-    rclcpp::Time tstart = rclcpp::Time::now();
+                        std::unordered_map<int,std::string>& index_msgs,
+                        const rclcpp::Clock::SharedPtr& clock){
+    // rclcpp::Time tstart = rclcpp::Time::now();
+    rclcpp::Time tstart= clock->now();
 
     // init pos: A_
     double v = 0;
@@ -71,7 +74,8 @@ void Line::generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
 
     index_msgs[goals.size() - 1] = "Line traj: stopped";
 
-    RCLCPP_INFO(logger_, "Time to calculate the traj (s): %f", (rclcpp::Time::now() - tstart).toSec());
+    // RCLCPP_INFO(logger_, "Time to calculate the traj (s): %f", (rclcpp::Time::now() - tstart).seconds());
+    RCLCPP_INFO(logger_, "Time to calculate the traj (s): %f", (clock->now() - tstart).seconds());
     RCLCPP_INFO(logger_, "Goal vector size = %lu", goals.size());
 }
 
@@ -103,8 +107,10 @@ snapstack_msgs2::msg::Goal Line::createLineGoal(double last_x, double last_y, do
 
 void Line::generateStopTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                             std::unordered_map<int,std::string>& index_msgs,
-                            int& pub_index){
-    rclcpp::Time tstart = rclcpp::Time::now();
+                            int& pub_index,
+                            const rclcpp::Clock::SharedPtr& clock){
+    // rclcpp::Time tstart = rclcpp::Time::now();
+    rclcpp::Time tstart = clock->now();
 
     double v = sqrt(pow(goals[pub_index].v.x, 2) +
                     pow(goals[pub_index].v.y, 2));  // 2D current (goal) vel
@@ -131,7 +137,8 @@ void Line::generateStopTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
     index_msgs = std::move(index_msgs_tmp);
     pub_index = 0;
 
-    RCLCPP_INFO(logger_, "Time to calculate the braking traj (s): %f", (rclcpp::Time::now() - tstart).toSec());
+    // RCLCPP_INFO(logger_, "Time to calculate the braking traj (s): %f", (rclcpp::Time::now() - tstart).seconds());
+    RCLCPP_INFO(logger_, "Time to calculate the braking traj (s): %f", (clock->now() - tstart).seconds());
     RCLCPP_INFO(logger_, "Goal vector size = %lu", goals.size());
 }
 
@@ -143,9 +150,9 @@ bool Line::trajectoryInsideBounds(double xmin, double xmax,
 
     double d2 = get_d2();
     double t2 = d2 / vg;
-    RCLCPP_INFO(logger_, "Line length: " << d << "m");
-    RCLCPP_INFO(logger_, "Constant velocity segment length: " << d2 << "m");
-    RCLCPP_INFO(logger_, "Constant velocity segment time: " << t2 << "s");
+    RCLCPP_INFO(logger_, "Line length: %f m", d);
+    RCLCPP_INFO(logger_, "Constant velocity segment length: %f m", d2);
+    RCLCPP_INFO(logger_, "Constant velocity segment time: %f s", t2);
     if(d2 < 0){
         RCLCPP_ERROR(logger_, "Line trajectory not feasible. Please increase accel, decrease v, or increase line length.");
         return false;

@@ -5,13 +5,20 @@
  * @date 2020-01-08
  */
 
-#include "rclcpp/rclcpp.hpp"
+#include <rclcpp/rclcpp.hpp>
 #include "trajectory_generator_ros2/TrajectoryGenerator.hpp"
+#include "TrajectoryGenerator.cpp"
+
+#include <memory>
 
 int main(int argc, char** argv)
 {
     rclcpp::init(argc, argv);
-    trajectory_generator::TrajectoryGenerator TrajectoryGenerator();
-    rclcpp::spin();
+    // trajectory_generator::TrajectoryGenerator trajectoryGenerator;
+    rclcpp::spin(std::make_shared<trajectory_generator::TrajectoryGenerator>());
+
+    //Spoof node 
+    // auto node = rclcpp::Node::make_shared("");
+    // rclcpp::spin(node);
     return 0;
 }

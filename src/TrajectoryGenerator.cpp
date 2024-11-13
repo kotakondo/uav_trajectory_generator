@@ -21,6 +21,10 @@
 #include <unordered_map>
 #include <string>
 
+#include <rclcpp/rclcpp.hpp>
+
+using std::placeholders::_1;
+
 /*
 #include <Eigen/Eigen>
 #include <Eigen/Core>
@@ -48,18 +52,18 @@ TrajectoryGenerator::TrajectoryGenerator()
     }
     RCLCPP_INFO(this->get_logger(), "veh_name_ = %s", veh_name_.c_str());
 
-    traj_->generateTraj(traj_goals_full_, index_msgs_full_);
+    traj_->generateTraj(traj_goals_full_, index_msgs_full_, this->get_clock());
     traj_goals_ = traj_goals_full_;
     index_msgs_ = index_msgs_full_;
 
-    subs_mode_ = this->create_subscription<snapstack_msgs2::msg::QuadFlightMode>("/globalflightmode", 1, std::bind(&TrajectoryGenerator::modeCB, this));
-    subs_state_ = this->create_subscription<snapstack_msgs2::msg::State>("state", 1, std::bind(&TrajectoryGenerator::stateCB, this));
+    subs_mode_ = this->create_subscription<snapstack_msgs2::msg::QuadFlightMode>("/globalflightmode", 1, std::bind(&TrajectoryGenerator::modeCB, this, _1));
+    subs_state_ = this->create_subscription<snapstack_msgs2::msg::State>("state", 1, std::bind(&TrajectoryGenerator::stateCB, this, _1));
     pub_timer_ = this->create_wall_timer(
-        chrono::duration<double>(dt_), 
+        std::chrono::duration<double>(dt_), 
         std::bind(&TrajectoryGenerator::pubCB, this));
-    pub_goal_  = this->create_publisher<snapstack_msgs2::msg::Goal>("goal", 1, false);  // topic, queue_size, latch
+    pub_goal_  = this->create_publisher<snapstack_msgs2::msg::Goal>("goal", 1);  // topic, queue_size
 
-    rclcpp::sleep_for(chrono::seconds(1));  // to ensure that the state has been received
+    rclcpp::sleep_for(std::chrono::seconds(1));  // to ensure that the state has been received
 
     flight_mode_ = GROUND;
 
@@ -191,8 +195,8 @@ void TrajectoryGenerator::modeCB(const snapstack_msgs2::msg::QuadFlightMode& msg
     // ESTOP -> KILL (6)
     if(msg.mode == msg.KILL){
         goal_.power = false;
-        goal_.header.stamp = rclcpp::Time::now();
-        pub_goal_.publish(goal_);
+        goal_.header.stamp = this->now();
+        pub_goal_->publish(goal_);
         flight_mode_ = GROUND;
         resetGoal();
         RCLCPP_INFO(this->get_logger(), "Motors killed, switched to GROUND mode.");
@@ -257,14 +261,14 @@ void TrajectoryGenerator::modeCB(const snapstack_msgs2::msg::QuadFlightMode& msg
         goal_.p.y = pose_.position.y;
         goal_.p.z = alt_;
         goal_.psi = quat2yaw(pose_.orientation);
-        goal_.header.stamp = rclcpp::Time::now();
-        pub_goal_.publish(goal_);
+        goal_.header.stamp = this->now();
+        pub_goal_->publish(goal_);
         flight_mode_ = HOVERING;
         RCLCPP_INFO(this->get_logger(), "Switched to HOVERING mode");
     }
     else if(flight_mode_ == TRAJ_FOLLOWING and msg.mode == msg.LAND){
         // Generate a braking trajectory. Then, we will automatically switch to hover when done
-        traj_->generateStopTraj(traj_goals_, index_msgs_, pub_index_);
+        traj_->generateStopTraj(traj_goals_, index_msgs_, pub_index_, this->get_clock());
     }
     else if(flight_mode_ == HOVERING and msg.mode == msg.LAND){
         //go to the initial position
@@ -273,7 +277,7 @@ void TrajectoryGenerator::modeCB(const snapstack_msgs2::msg::QuadFlightMode& msg
     }
 }
 
-void TrajectoryGenerator::pubCB(const rclcpp::TimerEvent& event){
+void TrajectoryGenerator::pubCB(){
     // Always publish a goal to avoid ramps in comm_monitor
     if(flight_mode_ == GROUND)
         goal_.power = false;  // not needed but just in case, for safety
@@ -314,7 +318,7 @@ void TrajectoryGenerator::pubCB(const rclcpp::TimerEvent& event){
             goal_.p.y = pose_.position.y;
             goal_.p.z = alt_;
             goal_.psi = quat2yaw(pose_.orientation);
-            pub_goal_.publish(goal_);
+            pub_goal_->publish(goal_);
             flight_mode_ = HOVERING;
             RCLCPP_INFO(this->get_logger(), "Trajectory finished. Switched to HOVERING mode");
         }
@@ -351,11 +355,11 @@ void TrajectoryGenerator::pubCB(const rclcpp::TimerEvent& event){
     goal_.p.y = saturate(goal_.p.y, ymin_, ymax_);
     goal_.p.z = saturate(goal_.p.z, zmin_, zmax_);
 
-    goal_.header.stamp = rclcpp::Time::now(); // set current time
+    goal_.header.stamp = this->now(); // set current time
 
     // Goals should only be published here because this is the only place where we
     // apply safety bounds. Exceptions: when killing the drone and when clicking END at init pos traj
-    pub_goal_.publish(goal_);
+    pub_goal_->publish(goal_);
 }
 
 void TrajectoryGenerator::stateCB(const snapstack_msgs2::msg::State& msg){

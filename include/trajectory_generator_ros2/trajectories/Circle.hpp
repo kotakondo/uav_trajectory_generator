@@ -35,13 +35,15 @@ public:
     virtual ~Circle(){}
 
     void generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
-                      std::unordered_map<int,std::string>& index_msgs) override;  // generates the circles
+                      std::unordered_map<int,std::string>& index_msgs,
+                      const rclcpp::Clock::SharedPtr& clock) override;  // generates the circles
 
     snapstack_msgs2::msg::Goal createCircleGoal(double v, double accel, double theta) const;
 
     void generateStopTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                                       std::unordered_map<int,std::string>& index_msgs,
-                                      int& pub_index) override;
+                                      int& pub_index,
+                                      const rclcpp::Clock::SharedPtr& clock) override;
 
     bool trajectoryInsideBounds(double xmin, double xmax,
                                 double ymin, double ymax,
