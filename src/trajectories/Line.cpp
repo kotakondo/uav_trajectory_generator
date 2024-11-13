@@ -5,11 +5,20 @@
  * @date 2020-02-19
  */
 
-#include "trajectory_generator/trajectories/Line.hpp"
+#include "trajectory_generator_ros2/trajectories/Line.hpp"
+
+#include "snapstack_msgs2/msg/quad_flight_mode.hpp"
+#include "snapstack_msgs2/msg/state.hpp"
+#include "snapstack_msgs2/msg/goal.hpp"
+
+#include <vector>
+#include <unordered_map>
+#include <string>
+#include <Eigen/Core>
 
 namespace trajectory_generator {
 
-void Line::generateTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
+void Line::generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                         std::unordered_map<int,std::string>& index_msgs){
     rclcpp::Time tstart = rclcpp::Time::now();
 
@@ -66,12 +75,12 @@ void Line::generateTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
     RCLCPP_INFO(logger_, "Goal vector size = %lu", goals.size());
 }
 
-snapstack_msgs::msg::Goal Line::createLineGoal(double last_x, double last_y, double v, double accel, double theta) const{
+snapstack_msgs2::msg::Goal Line::createLineGoal(double last_x, double last_y, double v, double accel, double theta) const{
     // from A to B: theta. From B to A: call with theta + M_PI
     double s = sin(theta);
     double c = cos(theta);
 
-    snapstack_msgs::msg::Goal goal;
+    snapstack_msgs2::msg::Goal goal;
     goal.header.frame_id = "world";
     goal.p.x   = last_x + v*c*dt_;
     goal.p.y   = last_y + v*s*dt_;
@@ -92,7 +101,7 @@ snapstack_msgs::msg::Goal Line::createLineGoal(double last_x, double last_y, dou
     return goal;
 }
 
-void Line::generateStopTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
+void Line::generateStopTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                             std::unordered_map<int,std::string>& index_msgs,
                             int& pub_index){
     rclcpp::Time tstart = rclcpp::Time::now();
@@ -102,7 +111,7 @@ void Line::generateStopTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
     double theta = atan2(goals[pub_index].v.y,
                          goals[pub_index].v.x);  // current yaw
 
-    std::vector<snapstack_msgs::msg::Goal> goals_tmp;
+    std::vector<snapstack_msgs2::msg::Goal> goals_tmp;
     std::unordered_map<int,std::string> index_msgs_tmp;
 
     index_msgs_tmp[0] = "Line traj: pressed END, decelerating to 0 m/s";

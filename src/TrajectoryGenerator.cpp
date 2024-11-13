@@ -5,9 +5,21 @@
  * @date 2020-01-08
  */
 
-#include "trajectory_generator/TrajectoryGenerator.hpp"
-#include "trajectory_generator/trajectories/Circle.hpp"
-#include "trajectory_generator/trajectories/Line.hpp"
+#include "trajectory_generator_ros2/TrajectoryGenerator.hpp"
+#include "trajectory_generator_ros2/trajectories/Circle.hpp"
+#include "trajectory_generator_ros2/trajectories/Line.hpp"
+
+#include <geometry_msgs/msg/quaternion.hpp>
+#include <geometry_msgs/msg/vector3.hpp>
+
+#include "snapstack_msgs2/msg/quad_flight_mode.hpp"
+#include "snapstack_msgs2/msg/state.hpp"
+#include "snapstack_msgs2/msg/goal.hpp"
+
+#include <Eigen/Core>
+#include <vector>
+#include <unordered_map>
+#include <string>
 
 /*
 #include <Eigen/Eigen>
@@ -40,12 +52,12 @@ TrajectoryGenerator::TrajectoryGenerator()
     traj_goals_ = traj_goals_full_;
     index_msgs_ = index_msgs_full_;
 
-    subs_mode_ = this->create_subscription<snapstack_msgs::msg::QuadFlightMode>("/globalflightmode", 1, std::bind(&TrajectoryGenerator::modeCB, this));
-    subs_state_ = this->create_subscription<snapstack_msgs::msg::State>("state", 1, std::bind(&TrajectoryGenerator::stateCB, this));
+    subs_mode_ = this->create_subscription<snapstack_msgs2::msg::QuadFlightMode>("/globalflightmode", 1, std::bind(&TrajectoryGenerator::modeCB, this));
+    subs_state_ = this->create_subscription<snapstack_msgs2::msg::State>("state", 1, std::bind(&TrajectoryGenerator::stateCB, this));
     pub_timer_ = this->create_wall_timer(
         chrono::duration<double>(dt_), 
         std::bind(&TrajectoryGenerator::pubCB, this));
-    pub_goal_  = this->create_publisher<snapstack_msgs::msg::goal>("goal", 1, false);  // topic, queue_size, latch
+    pub_goal_  = this->create_publisher<snapstack_msgs2::msg::Goal>("goal", 1, false);  // topic, queue_size, latch
 
     rclcpp::sleep_for(chrono::seconds(1));  // to ensure that the state has been received
 
@@ -163,7 +175,7 @@ bool TrajectoryGenerator::readParameters()
     return true;
 }
 
-void TrajectoryGenerator::modeCB(const snapstack_msgs::msg::QuadFlightMode& msg){
+void TrajectoryGenerator::modeCB(const snapstack_msgs2::msg::QuadFlightMode& msg){
     // FSM transitions:
     // Any state        --ESTOP--> [kill motors] and switch to ground mode
     // On the ground    --START--> Take off and then hover
@@ -346,7 +358,7 @@ void TrajectoryGenerator::pubCB(const rclcpp::TimerEvent& event){
     pub_goal_.publish(goal_);
 }
 
-void TrajectoryGenerator::stateCB(const snapstack_msgs::msg::State& msg){
+void TrajectoryGenerator::stateCB(const snapstack_msgs2::msg::State& msg){
     pose_.position.x = msg.pos.x;
     pose_.position.y = msg.pos.y;
     pose_.position.z = msg.pos.z;
@@ -364,15 +376,15 @@ void TrajectoryGenerator::resetGoal(){
     goal_.psi = quat2yaw(pose_.orientation); goal_.dpsi = 0;
 //    goal_.power = false;
     // reset_xy_int and  reset_z_int are not used
-    goal_.mode_xy = snapstack_msgs::msg::Goal::MODE_POSITION_CONTROL;
-    goal_.mode_z = snapstack_msgs::msg::Goal::MODE_POSITION_CONTROL;
+    goal_.mode_xy = snapstack_msgs2::msg::Goal::MODE_POSITION_CONTROL;
+    goal_.mode_z = snapstack_msgs2::msg::Goal::MODE_POSITION_CONTROL;
 }
 
 // Utils
-snapstack_msgs::msg::Goal TrajectoryGenerator::simpleInterpolation(const snapstack_msgs::msg::Goal& current,
+snapstack_msgs2::msg::Goal TrajectoryGenerator::simpleInterpolation(const snapstack_msgs2::msg::Goal& current,
         const geometry_msgs::msg::Vector3& dest_pos, double dest_yaw, double vel, double vel_yaw,
         double dist_thresh, double yaw_thresh, double dt, bool& finished){
-    snapstack_msgs::msg::Goal goal;
+    snapstack_msgs2::msg::Goal goal;
     // interpolate from current goal pos to the initial goal pos
     double Dx = dest_pos.x - current.p.x;
     double Dy = dest_pos.y - current.p.y;
@@ -434,10 +446,10 @@ snapstack_msgs::msg::Goal TrajectoryGenerator::simpleInterpolation(const snapsta
 }
 
 // for new snapstack messages
-snapstack_msgs::msg::Goal TrajectoryGenerator::simpleInterpolation(const snapstack_msgs::msg::Goal& current,
-        const snapstack_msgs::msg::Goal& dest_pos, double dest_yaw, double vel, double vel_yaw,
+snapstack_msgs2::msg::Goal TrajectoryGenerator::simpleInterpolation(const snapstack_msgs2::msg::Goal& current,
+        const snapstack_msgs2::msg::Goal& dest_pos, double dest_yaw, double vel, double vel_yaw,
         double dist_thresh, double yaw_thresh, double dt, bool& finished){
-    snapstack_msgs::msg::Goal goal;
+    snapstack_msgs2::msg::Goal goal;
     // interpolate from current goal pos to the initial goal pos
     double Dx = dest_pos.p.x - current.p.x;
     double Dy = dest_pos.p.y - current.p.y;

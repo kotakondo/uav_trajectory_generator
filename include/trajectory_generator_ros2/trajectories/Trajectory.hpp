@@ -10,9 +10,11 @@
 #include <vector>
 #include <unordered_map>
 #include <Eigen/Core>
+#include <string>
 
-#include <ros/ros.h>
-#include <snapstack_msgs/msg/goal.h>
+#include <rclcpp/rclcpp.hpp>
+#include "snapstack_msgs2/msg/goal.hpp"
+
 
 namespace trajectory_generator {
 
@@ -28,11 +30,11 @@ public:
 
     // Generate the trajectory to be followed
     // It should only be called at init bc it can exit the program
-    virtual void generateTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
+    virtual void generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                               std::unordered_map<int,std::string>& index_msgs) = 0;
 
     // Generate a stopping (braking) trajectory
-    virtual void generateStopTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
+    virtual void generateStopTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                                   std::unordered_map<int,std::string>& index_msgs,
                                   int& pub_index) = 0;
 

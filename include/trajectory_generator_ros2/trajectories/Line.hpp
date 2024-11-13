@@ -7,9 +7,16 @@
 
 #pragma once
 
-#include "trajectory_generator/trajectories/Trajectory.hpp"
-#include "rclcpp/logger.h"
-#include "rclcpp/logging.h"
+#include "trajectory_generator_ros2/trajectories/Trajectory.hpp"
+#include <rclcpp/logger.hpp>
+#include <rclcpp/logging.hpp>
+
+#include "snapstack_msgs2/msg/goal.hpp"
+
+#include <string>
+#include <unordered_map>
+#include <Eigen/Core>
+#include <vector>
 
 namespace trajectory_generator {
 
@@ -28,12 +35,12 @@ public:
 
     virtual ~Line(){}
 
-    void generateTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
+    void generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                       std::unordered_map<int,std::string>& index_msgs) override;
-    snapstack_msgs::msg::Goal createLineGoal (double last_x, double last_y,
+    snapstack_msgs2::msg::Goal createLineGoal (double last_x, double last_y,
                                              double v, double accel, double theta) const;
 
-    void generateStopTraj(std::vector<snapstack_msgs::msg::Goal>& goals,
+    void generateStopTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                           std::unordered_map<int,std::string>& index_msgs,
                           int& pub_index) override;
 

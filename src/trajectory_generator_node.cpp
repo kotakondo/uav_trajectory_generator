@@ -5,8 +5,8 @@
  * @date 2020-01-08
  */
 
-#include <rclcpp/rclcpp.h>
-#include "trajectory_generator/TrajectoryGenerator.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "trajectory_generator_ros2/TrajectoryGenerator.hpp"
 
 int main(int argc, char** argv)
 {
