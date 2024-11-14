@@ -28,11 +28,9 @@ class Circle: public Trajectory
 public:
 
     Circle(double alt, double r, double cx, double cy,
-           std::vector<double> v_goals, double t_traj, double accel, double dt):
-      alt_(alt), r_(r), cx_(cx), cy_(cy),
-      v_goals_(v_goals), t_traj_(t_traj), accel_(accel), Trajectory(dt){}
+           std::vector<double> v_goals, double t_traj, double accel, double dt);
 
-    virtual ~Circle(){}
+    virtual ~Circle();
 
     void generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                       std::unordered_map<int,std::string>& index_msgs,

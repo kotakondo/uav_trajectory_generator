@@ -7,7 +7,10 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include "trajectory_generator_ros2/TrajectoryGenerator.hpp"
+
 #include "TrajectoryGenerator.cpp"
+#include "trajectories/Circle.cpp"
+#include "trajectories/Line.cpp"
 
 #include <memory>
 

@@ -28,12 +28,9 @@ class Line: public Trajectory
 public:
 
     Line(double alt, Eigen::Vector3d A, Eigen::Vector3d B,
-         std::vector<double> v_goals, double a1, double a3, double dt): alt_(alt),
-      A_(A), B_(B), v_goals_(v_goals), a1_(a1), a3_(a3), Trajectory(dt){
-        theta_ = atan2(B_.y() - A_.y(), B_.x() - A_.x());
-    }
+         std::vector<double> v_goals, double a1, double a3, double dt);
 
-    virtual ~Line(){}
+    virtual ~Line();
 
     void generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                       std::unordered_map<int,std::string>& index_msgs,
