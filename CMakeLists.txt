@@ -114,6 +114,16 @@ install(
   FILES_MATCHING PATTERN "*.hpp"
 )
 
+install (
+  DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch
+)
+
+install (
+  DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
+)
+
 # Export for downstream users
 ament_export_targets(export_package) 
 

@@ -81,14 +81,54 @@ TrajectoryGenerator::~TrajectoryGenerator()
 }
 
 bool TrajectoryGenerator::readParameters()
-{
- 
+{   
+    // First declare parameters (new on ROS2)
+    this->declare_parameter("alt", 0.0);
+    this->declare_parameter("pub_freq", 0.0);
+    this->declare_parameter("traj_type", "");
+    
+    // Circle params
+    this->declare_parameter("r", 0.0);
+    this->declare_parameter("center_x", 0.0);
+    this->declare_parameter("center_y", 0.0);
+    this->declare_parameter<std::vector<float>>("v_goals", {0.0, 0.0, 0.0, 0.0, 0.0});
+    this->declare_parameter("t_traj", 0.0);
+    this->declare_parameter("circle_accel", 0.0);
+    
+    // Line params
+    this->declare_parameter("Ax", 0.0);
+    this->declare_parameter("Ay", 0.0);
+    this->declare_parameter("Bx", 0.0);
+    this->declare_parameter("By", 0.0);
+    this->declare_parameter("v_line", 0.0);
+    this->declare_parameter("line_accel", 0.0);
+    this->declare_parameter("line_decel", 0.0);
+
+    // Other params
+    this->declare_parameter("vel_initpos", 0.0);
+    this->declare_parameter("vel_take", 0.0);
+    this->declare_parameter("vel_land_fast", 0.0);
+    this->declare_parameter("vel_land_slow", 0.0);
+    this->declare_parameter("vel_yaw", 0.0);
+    this->declare_parameter("dist_thresh", 0.0);
+    this->declare_parameter("yaw_thresh", 0.0);
+
+    // Bounds
+    this->declare_parameter("margin_takeoff_outside_bounds", 0.0);
+    this->declare_parameter("x_min", 0.0);
+    this->declare_parameter("x_max", 0.0);
+    this->declare_parameter("y_min", 0.0);
+    this->declare_parameter("y_max", 0.0);
+    this->declare_parameter("z_min", 0.0);
+    this->declare_parameter("z_max", 0.0);
+
+    // RCLCPP_INFO(this->get_logger(), this->get_parameter("alt", alt_) ? "true" : "false");
     if (!this->get_parameter("alt", alt_)) return false;
     double freq;
-  
+
     if (!this->get_parameter("pub_freq", freq)) return false;
     dt_ = 1.0/freq;
- 
+    
     std::string traj_type;
     if (!this->get_parameter("traj_type", traj_type)) return false;
     if(traj_type == "Circle"){
@@ -154,7 +194,7 @@ bool TrajectoryGenerator::readParameters()
     if (!this->get_parameter("yaw_thresh", yaw_thresh_)) return false;
 
     if (!this->get_parameter("margin_takeoff_outside_bounds", margin_takeoff_outside_bounds_)) return false;
-    
+
     // bounds
     // if (!this->get_parameter("/room_bounds/x_min", xmin_)) return false;
     // if (!this->get_parameter("/room_bounds/x_max", xmax_)) return false;
@@ -171,6 +211,7 @@ bool TrajectoryGenerator::readParameters()
     if (!this->get_parameter("z_min", zmin_)) return false;
     if (!this->get_parameter("z_max", zmax_)) return false;
     // check that the trajectory params don't conflict with the bounds
+    
     if(!traj_->trajectoryInsideBounds(xmin_, xmax_, ymin_, ymax_, zmin_, zmax_)){
         RCLCPP_ERROR(this->get_logger(), "TheF trajectory parameters conflict with the room bounds.");
         return false;
