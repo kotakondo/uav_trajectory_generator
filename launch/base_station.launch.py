@@ -8,11 +8,11 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
-    # behavior_selector_launch_file = os.path.join(
-    #     get_package_share_directory('behavior_selector2'),
-    #     'launch',
-    #     'gui.launch.py'
-    # )
+    behavior_selector_launch_file = os.path.join(
+        get_package_share_directory('behavior_selector2'),
+        'launch',
+        'gui.launch.py'
+    )
 
     return LaunchDescription([
             Node(
@@ -24,9 +24,8 @@ def generate_launch_description():
                 os.path.join(get_package_share_directory('trajectory_generator_ros2'),
                         'config', 'default.rviz')
             ]
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(behavior_selector_launch_file)
         )
-        #,
-        # IncludeLaunchDescription(
-        #     PythonLaunchDescriptionSource(behavior_selector_launch_file)
-        # )
     ])

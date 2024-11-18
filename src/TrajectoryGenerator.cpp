@@ -329,6 +329,8 @@ void TrajectoryGenerator::pubCB(){
 
         double takeoff_alt = alt_;  // don't add init alt bc the traj is generated with z = alt_
         // if close to the takeoff_alt, switch to HOVERING
+        RCLCPP_INFO(this->get_logger(), "Takeoff alt: %f", alt_);
+        RCLCPP_INFO(this->get_logger(), "Pose z: %f", pose_.position.z);
         if(fabs(takeoff_alt - pose_.position.z) < 0.10 and goal_.p.z >= takeoff_alt){
             flight_mode_ = HOVERING;
             RCLCPP_INFO(this->get_logger(), "Take off completed");
