@@ -35,6 +35,13 @@ namespace trajectory_generator {
 TrajectoryGenerator::TrajectoryGenerator()
     : Node("trajectory_generator")
 {
+
+    //QoS Profile 
+    rclcpp::QoS qos_profile(10);
+    qos_profile
+        .durability(rclcpp::DurabilityPolicy::Volatile)
+        .reliability(rclcpp::ReliabilityPolicy::BestEffort);
+
     if (!readParameters()) {
         RCLCPP_ERROR(this->get_logger(), "Could not read parameters.");
         rclcpp::shutdown();
@@ -57,7 +64,7 @@ TrajectoryGenerator::TrajectoryGenerator()
     index_msgs_ = index_msgs_full_;
 
     subs_mode_ = this->create_subscription<snapstack_msgs2::msg::QuadFlightMode>("/globalflightmode", 1, std::bind(&TrajectoryGenerator::modeCB, this, _1));
-    subs_state_ = this->create_subscription<snapstack_msgs2::msg::State>("state", 1, std::bind(&TrajectoryGenerator::stateCB, this, _1));
+    subs_state_ = this->create_subscription<snapstack_msgs2::msg::State>("state", qos_profile, std::bind(&TrajectoryGenerator::stateCB, this, _1));
     pub_timer_ = this->create_wall_timer(
         std::chrono::duration<double>(dt_), 
         std::bind(&TrajectoryGenerator::pubCB, this));
@@ -328,10 +335,11 @@ void TrajectoryGenerator::pubCB(){
         // TODO: spinup time
 
         double takeoff_alt = alt_;  // don't add init alt bc the traj is generated with z = alt_
+        double eps = 0.35; //TODO: Change back to 0.10
         // if close to the takeoff_alt, switch to HOVERING
-        RCLCPP_INFO(this->get_logger(), "Takeoff alt: %f", alt_);
+        // RCLCPP_INFO(this->get_logger(), "Takeoff alt: %f", alt_);
         RCLCPP_INFO(this->get_logger(), "Pose z: %f", pose_.position.z);
-        if(fabs(takeoff_alt - pose_.position.z) < 0.10 and goal_.p.z >= takeoff_alt){
+        if(fabs(takeoff_alt - pose_.position.z) < eps and goal_.p.z >= takeoff_alt){
             flight_mode_ = HOVERING;
             RCLCPP_INFO(this->get_logger(), "Take off completed");
         }
@@ -406,6 +414,7 @@ void TrajectoryGenerator::pubCB(){
 }
 
 void TrajectoryGenerator::stateCB(const snapstack_msgs2::msg::State& msg){
+    // RCLCPP_INFO(this->get_logger(), "State is Subscribing %f", msg.pos.z);
     pose_.position.x = msg.pos.x;
     pose_.position.y = msg.pos.y;
     pose_.position.z = msg.pos.z;
