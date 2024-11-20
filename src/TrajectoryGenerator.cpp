@@ -335,7 +335,7 @@ void TrajectoryGenerator::pubCB(){
         // TODO: spinup time
 
         double takeoff_alt = alt_;  // don't add init alt bc the traj is generated with z = alt_
-        double eps = 0.35; //TODO: Change back to 0.10
+        double eps = 0.10; //TODO: Change back to 0.10
         // if close to the takeoff_alt, switch to HOVERING
         // RCLCPP_INFO(this->get_logger(), "Takeoff alt: %f", alt_);
         RCLCPP_INFO(this->get_logger(), "Pose z: %f", pose_.position.z);
