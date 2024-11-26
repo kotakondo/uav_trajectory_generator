@@ -6,7 +6,7 @@ SQ01:
       pub_freq: 150.0  # Hz
 
       # Type of trajectory
-      traj_type: Circle  # Circle or Line
+      traj_type: Line  # Circle or Line
 
       # Circular trajectory parameters
       r: 3.4  # m
@@ -18,11 +18,11 @@ SQ01:
       circle_accel:  0.4  # max acceleration allowed, m/s^2. Should be small
 
       # Line trajectory parameters
-      Ax: -4.25
-      Ay: -3.5
-      Bx: 4.5
-      By: 4.25
-      v_line: 3.0  # m/s
+      Ax: -3.75    # Ax: -4.25
+      Ay: -3.0    # Ay: -3.5
+      Bx: 4.0    # Bx: 4.5
+      By: 3.75    # By: 4.25
+      v_line: 0.5 #3.0  # m/s
       line_accel: 1.5
       line_decel: 1.0  # should be smaller for safety
 
@@ -33,7 +33,7 @@ SQ01:
       vel_land_slow: 0.04
       vel_yaw: 0.2
 
-      dist_thresh: 0.1  # m
+      dist_thresh: 0.3  # m
       yaw_thresh: 0.2  # rad
 
       margin_takeoff_outside_bounds: 0.05  # m
