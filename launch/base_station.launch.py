@@ -14,8 +14,7 @@ def generate_launch_description():
         'gui.launch.py'
     )
 
-    return LaunchDescription([
-            Node(
+    rviz_node = Node(
             package="rviz2",
             name="rviz2",
             executable="rviz2",
@@ -24,7 +23,10 @@ def generate_launch_description():
                 os.path.join(get_package_share_directory('trajectory_generator_ros2'),
                         'config', 'default.rviz')
             ]
-        ),
+        )
+
+    return LaunchDescription([
+            # rviz_node,
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(behavior_selector_launch_file)
         )
