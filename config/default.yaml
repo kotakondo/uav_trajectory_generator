@@ -22,7 +22,7 @@ SQ01:
       Ay: -3.0    # Ay: -3.5
       Bx: 4.0    # Bx: 4.5
       By: 3.75    # By: 4.25
-      v_line: 1.0 #3.0  # m/s
+      v_line: 2.0 #3.0  # m/s
       line_accel: 1.5
       line_decel: 1.0  # should be smaller for safety
 
