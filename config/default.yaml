@@ -3,10 +3,10 @@ SQ01:
     ros__parameters:
       # Main params
       alt: 1.8  # absolute alt, m
-      pub_freq: 150.0  # Hz
+      pub_freq: 100.0  # Hz
 
       # Type of trajectory
-      traj_type: Line  # Circle or Line
+      traj_type: Boomerang # Circle or Line or Boomerang
 
       # Circular trajectory parameters
       r: 3.4  # m

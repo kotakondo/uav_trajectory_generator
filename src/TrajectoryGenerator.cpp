@@ -8,6 +8,7 @@
 #include "trajectory_generator_ros2/TrajectoryGenerator.hpp"
 #include "trajectory_generator_ros2/trajectories/Circle.hpp"
 #include "trajectory_generator_ros2/trajectories/Line.hpp"
+#include "trajectory_generator_ros2/trajectories/Boomerang.hpp"
 
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
@@ -160,7 +161,7 @@ bool TrajectoryGenerator::readParameters()
         }
         traj_ = std::make_unique<Circle>(alt_, r, cx, cy, v_goals, t_traj, circle_accel, dt_);
     }
-    else if(traj_type == "Line"){
+    else if(traj_type == "Line" || traj_type == "Boomerang"){
         // line trajectory parameters
         double Ax, Ay, Bx, By, v_line, a1, a3;
         if (!this->get_parameter("Ax", Ax)) return false;
@@ -181,9 +182,17 @@ bool TrajectoryGenerator::readParameters()
             return false;
         }
         std::vector<double> v_goals; v_goals.push_back(v_line);
-        traj_ = std::make_unique<Line>(alt_, Eigen::Vector3d(Ax, Ay, alt_),
+
+        if (traj_type == "Line"){
+            traj_ = std::make_unique<Line>(alt_, Eigen::Vector3d(Ax, Ay, alt_),
                                        Eigen::Vector3d(Bx, By, alt_),
                                        v_goals, a1, a3, dt_);
+        } 
+        else if (traj_type == "Boomerang") {
+            traj_ = std::make_unique<Boomerang>(alt_, Eigen::Vector3d(Ax, Ay, alt_),
+                                       Eigen::Vector3d(Bx, By, alt_),
+                                       v_goals, a1, a3, dt_);
+        }
     }
     else{
         RCLCPP_ERROR(this->get_logger(), "Trajectory type not valid.");
