@@ -9,6 +9,7 @@
 #include "trajectory_generator_ros2/trajectories/Circle.hpp"
 #include "trajectory_generator_ros2/trajectories/Line.hpp"
 #include "trajectory_generator_ros2/trajectories/Boomerang.hpp"
+#include "trajectory_generator_ros2/trajectories/Figure8.hpp"
 
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
@@ -160,6 +161,28 @@ bool TrajectoryGenerator::readParameters()
             return false;
         }
         traj_ = std::make_unique<Circle>(alt_, r, cx, cy, v_goals, t_traj, circle_accel, dt_);
+    }
+    else if(traj_type == "Figure8"){
+        // circular trajectory parameters
+        double r, cx, cy, t_traj, circle_accel;
+        std::vector<double> v_goals;
+        if (!this->get_parameter("r", r)) return false;
+        if (!this->get_parameter("center_x", cx)) return false;
+        if (!this->get_parameter("center_y", cy)) return false;
+        if (!this->get_parameter("v_goals", v_goals)) return false;
+        for(double vel : v_goals){
+            if(vel <= 0){
+                RCLCPP_ERROR(this->get_logger(), "All velocities must be > 0");
+                return false;
+            }
+        }
+        if (!this->get_parameter("t_traj", t_traj)) return false;
+        if (!this->get_parameter("circle_accel", circle_accel)) return false;
+        if (circle_accel <= 0){
+            RCLCPP_ERROR(this->get_logger(), "accel must be > 0");
+            return false;
+        }
+        traj_ = std::make_unique<Figure8>(alt_, r, cx, cy, v_goals, t_traj, circle_accel, dt_);
     }
     else if(traj_type == "Line" || traj_type == "Boomerang"){
         // line trajectory parameters

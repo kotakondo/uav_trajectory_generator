@@ -48,6 +48,7 @@ add_library(${PROJECT_NAME}_core
   src/TrajectoryGenerator.cpp
   src/trajectories/Circle.cpp
   src/trajectories/Line.cpp
+  src/trajectories/Figure8.cpp
 )
 
 # ROS2:

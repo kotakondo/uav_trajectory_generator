@@ -12,6 +12,7 @@
 #include "trajectories/Circle.cpp"
 #include "trajectories/Line.cpp"
 #include "trajectories/Boomerang.cpp"
+#include "trajectories/Figure8.cpp"
 
 #include <memory>
 
