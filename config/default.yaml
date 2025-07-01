@@ -6,22 +6,48 @@ SQ01:
       pub_freq: 100.0  # Hz
 
       # Type of trajectory
-      traj_type: Figure8 # Circle , Line , Boomerang , Figure8
+      traj_type: T # Circle , Line , Boomerang , Figure8, Square, Reciprocating, Rectangle, Bounce, M, I, T
+
+      # T trajectory parameters
+      T_length: 3.0   # height of the T (vertical)
+      T_width: 4.0    # width of the T (horizontal)
+      
+      # I trajectory parameters
+      I_length: 3.0   # height of the I (vertical)
+      I_width: 4.0    # width of the I (horizontal)
+
+      # M trajectory parameters
+      M_length: 3.0   # height of the M (vertical)
+      M_width: 4.0    # width of the M (horizontal)
+
+      #Bounce trajectory parameters
+      Az: 4.0  # Altitude at the top of the bounce, m
+      Bz: 1.0  # Altitude at the bottom of the bounce,
+
+      # Square trajectory parameters
+      side_length: 2.0  # m
+      square_accel: 0.4  # max acceleration allowed, m/s^2
+      orientation: 0.0  # rad, orientation of the square in the XY plane
+
+      #Rectangle trajectory parameters
+      side_a: 2.0  # length of one side (m)
+      side_b: 4.0  # length of the other side (m)
+      rectangle_accel: 0.4  # max acceleration allowed, m/s^2
 
       # Circular trajectory parameters
       r: 3.4  # m
       center_x: 0.0  # m
-      center_y: 0.5  # m
+      center_y: 0.0  # m
       # v_goals: [1.0, 2.0, 3.0, 4.0, 5.0]  # velocity magnitudes in increasing order, m/s
       v_goals: [1.0, 2.0, 2.0]
-      t_traj: 20.0  # time to follow each trajectory, s
+      t_traj: 80.0  # time to follow each trajectory, s
       circle_accel:  0.4  # max acceleration allowed, m/s^2. Should be small
 
       # Line trajectory parameters
-      Ax: -3.75    # Ax: -4.25
+      Ax: 0.0    # Ax: -4.25
       Ay: -3.0    # Ay: -3.5
-      Bx: 4.0    # Bx: 4.5
-      By: 3.75    # By: 4.25
+      Bx: 0.0    # Bx: 4.5
+      By: 3.0    # By: 4.25
       v_line: 1.0 #3.0  # m/s
       line_accel: 1.5
       line_decel: 1.0  # should be smaller for safety
