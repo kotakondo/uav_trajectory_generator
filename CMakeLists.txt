@@ -49,6 +49,13 @@ add_library(${PROJECT_NAME}_core
   src/trajectories/Circle.cpp
   src/trajectories/Line.cpp
   src/trajectories/Figure8.cpp
+  src/trajectories/Square.cpp
+  src/trajectories/Reciprocating.cpp
+  src/trajectories/Rectangle.cpp
+  src/trajectories/Bounce.cpp
+  src/trajectories/M.cpp
+  src/trajectories/I.cpp
+  src/trajectories/T.cpp
 )
 
 # ROS2:

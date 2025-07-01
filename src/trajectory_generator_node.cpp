@@ -13,6 +13,13 @@
 #include "trajectories/Line.cpp"
 #include "trajectories/Boomerang.cpp"
 #include "trajectories/Figure8.cpp"
+#include "trajectories/Square.cpp"
+#include "trajectories/Reciprocating.cpp"
+#include "trajectories/Rectangle.cpp"
+#include "trajectories/Bounce.cpp"
+#include "trajectories/M.cpp"
+#include "trajectories/I.cpp"
+#include "trajectories/T.cpp"
 
 #include <memory>
 
