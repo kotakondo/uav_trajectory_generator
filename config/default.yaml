@@ -2,7 +2,7 @@ SQ01:
   trajectory_generator_ros2:
     ros__parameters:
       # Main params
-      alt: 1.8  # absolute alt, m
+      alt: 2.4  # absolute alt, 1.8 originally
       pub_freq: 100.0  # Hz
 
       # Type of trajectory
@@ -36,7 +36,7 @@ SQ01:
       rectangle_accel: 0.4  # max acceleration allowed, m/s^2
 
       # Circular trajectory parameters
-      r: 3.4  # m
+      r: 0.75  # m
       center_x: 0.0  # m
       center_y: 0.0  # m
       # v_goals: [1.0, 2.0, 3.0, 4.0, 5.0]  # velocity magnitudes in increasing order, m/s

@@ -63,8 +63,14 @@ void Trefoil::generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
         double current_t_traj_ = 0;
         while(current_t_traj_ < t_traj_){
             // generate points in the Trefoil with *constant* velocity v == v_goal
-            double omega = v/r_;
-            theta += omega*dt_;
+            double vx = r_ * (cos(theta) + 4 * cos(2*theta));
+            double vy = r_ * (-sin(theta) + 4 * sin(2*theta));
+            double vz = (-3 * cos(3*theta));
+            double tangent_mag = sqrt(vx*vx+ vy*vy+ vz*vz);
+
+            double dtheta = (tangent_mag > 0) ? (v* dt_) / tangent_mag : 0;
+            theta += dtheta;
+
 
             goals.push_back(createTrefoilGoal(v, 0, theta));
             current_t_traj_ += dt_;
@@ -107,12 +113,28 @@ snapstack_msgs2::msg::Goal Trefoil::createTrefoilGoal(double v, double accel, do
     goal.p.x   = cx_ + r_ * (sin(t) + 2 * sin(2*t));
     goal.p.y   = cy_ + r_ * (cos(t) -2 * cos(2*t));
     goal.p.z   = alt_ + r_ * (-sin(3*t));
+    // goal.v.x = 1.0;
+    // goal.v.y = 1.0;
+    // goal.v.z = 1.0;
     goal.v.x   = r_ * (cos(t) + 4 * cos(2*t));
     goal.v.y   = r_ * (-sin(t) + 4 * sin(2*t));
     goal.v.z   = (-3 * cos(3*t));
-    goal.a.x = r_ * (-sin(t) - 8 * sin(2*t)); //+ accel*c; //this accel term makes a.x discontinuous
-    goal.a.y = r_ * (-cos(t) + 8 * cos(2*t));//+ accel*s; //this accel term makes a.y discontinuous
-    goal.a.z = r_ * (9 * sin(3*t));
+
+    double tangent_mag = sqrt(goal.v.x*goal.v.x + goal.v.y*goal.v.y+ goal.v.z*goal.v.z);
+    double unit_tangent_x = (tangent_mag > 0) ? goal.v.x / tangent_mag : 0;
+    double unit_tangent_y = (tangent_mag > 0) ? goal.v.y / tangent_mag : 0;
+    double unit_tangent_z = (tangent_mag > 0) ? goal.v.z / tangent_mag : 0;
+
+    goal.v.x = v * unit_tangent_x;
+    goal.v.y = v * unit_tangent_y;
+    goal.v.z = v * unit_tangent_z;
+
+    // goal.a.x  = 0;
+    // goal.a.y = 0;
+    // goal.a.z = 0;
+    goal.a.x = (r_ * (-sin(t) - 8 * sin(2*t))) * unit_tangent_x; //+ accel*c; //this accel term makes a.x discontinuous
+    goal.a.y = (r_ * (-cos(t) + 8 * cos(2*t))) * unit_tangent_y;//+ accel*s; //this accel term makes a.y discontinuous
+    goal.a.z = (r_ * (9 * sin(3*t))) * unit_tangent_z;
     goal.j.x  = 0;
     goal.j.y  = 0;
     goal.j.z  = 0;
@@ -120,7 +142,7 @@ snapstack_msgs2::msg::Goal Trefoil::createTrefoilGoal(double v, double accel, do
     //goal.s.y  = v4r3*s;
     //goal.s.z  = 0;
     goal.psi = atan2(goal.v.y, goal.v.x); // face direction of velocity
-    goal.dpsi = v / r_;  // dyaw has to be in world frame, the outer loop already converts it to body
+    goal.dpsi = 0;  // dyaw has to be in world frame, the outer loop already converts it to body
     goal.power = true;
 
     return goal;
