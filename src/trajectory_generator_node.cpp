@@ -20,6 +20,7 @@
 #include "trajectories/M.cpp"
 #include "trajectories/I.cpp"
 #include "trajectories/T.cpp"
+#include "trajectories/Trefoil.cpp"
 
 #include <memory>
 

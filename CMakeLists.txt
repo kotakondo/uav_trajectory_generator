@@ -56,6 +56,7 @@ add_library(${PROJECT_NAME}_core
   src/trajectories/M.cpp
   src/trajectories/I.cpp
   src/trajectories/T.cpp
+  src/trajectories/Trefoil.cpp
 )
 
 # ROS2:

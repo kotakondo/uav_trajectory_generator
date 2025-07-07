@@ -17,6 +17,7 @@
 #include "trajectory_generator_ros2/trajectories/M.hpp"
 #include "trajectory_generator_ros2/trajectories/I.hpp"
 #include "trajectory_generator_ros2/trajectories/T.hpp"
+#include "trajectory_generator_ros2/trajectories/Trefoil.hpp"
 
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
@@ -382,10 +383,29 @@ bool TrajectoryGenerator::readParameters()
 
         traj_ = std::make_unique<T>(cx, cy, T_length, T_width, alt_, v_goals, t_traj, orientation, dt_);
     }
-    else{
-        RCLCPP_ERROR(this->get_logger(), "Trajectory type not valid.");
-        return false;
+    else if(traj_type == "Trefoil"){
+        // circular trajectory parameters
+        double r, cx, cy, t_traj, circle_accel;
+        std::vector<double> v_goals;
+        if (!this->get_parameter("r", r)) return false;
+        if (!this->get_parameter("center_x", cx)) return false;
+        if (!this->get_parameter("center_y", cy)) return false;
+        if (!this->get_parameter("v_goals", v_goals)) return false;
+        for(double vel : v_goals){
+            if(vel <= 0){
+                RCLCPP_ERROR(this->get_logger(), "All velocities must be > 0");
+                return false;
+            }
+        }
+        if (!this->get_parameter("t_traj", t_traj)) return false;
+        if (!this->get_parameter("circle_accel", circle_accel)) return false;
+        if (circle_accel <= 0){
+            RCLCPP_ERROR(this->get_logger(), "accel must be > 0");
+            return false;
+        }
+        traj_ = std::make_unique<Trefoil>(alt_, r, cx, cy, v_goals, t_traj, circle_accel, dt_);
     }
+
 
     // other params
     if (!this->get_parameter("vel_initpos", vel_initpos_)) return false;
