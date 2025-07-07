@@ -2,7 +2,7 @@
  * @file Trefoil.cpp
  * @brief Trefoil class
  * @author Jialin Chen
- * @date 2025-07-07
+ * @date 2025-06-18
  */
 
 #include "trajectory_generator_ros2/trajectories/Trefoil.hpp"
@@ -15,7 +15,6 @@
 #include <unordered_map>
 #include <string>
 #include <Eigen/Core>
-#include <cmath>
 
 namespace trajectory_generator {
 
@@ -36,10 +35,10 @@ void Trefoil::generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
     rclcpp::Time tstart = clock->now();
 
     // init pos
-    double t = 0.0;
-    double v = 0.0;
+    double theta = 0;
+    double v = 0;
 
-    goals.push_back(createTrefoilGoal(v, 0, t));
+    goals.push_back(createTrefoilGoal(v, 0, theta));
 
     for(int i = 0; i < v_goals_.size(); ++i){
         double v_goal = v_goals_[i];
@@ -48,9 +47,10 @@ void Trefoil::generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
         while(v < v_goal){
             // generate points in the Trefoil with *increasing* velocity
             v = std::min(v + accel_*dt_, v_goal);
-            goals.push_back(createTrefoilGoal(v, accel_, t));
-            t += dt_;
+            double omega = v/r_;
+            theta += omega*dt_;
 
+            goals.push_back(createTrefoilGoal(v, accel_, theta));
         }
 
         // we reached v_goal, continue the traj for t_traj_ seconds
@@ -63,8 +63,10 @@ void Trefoil::generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
         double current_t_traj_ = 0;
         while(current_t_traj_ < t_traj_){
             // generate points in the Trefoil with *constant* velocity v == v_goal
-            goals.push_back(createTrefoilGoal(v, 0, t));
-            t += dt_;
+            double omega = v/r_;
+            theta += omega*dt_;
+
+            goals.push_back(createTrefoilGoal(v, 0, theta));
             current_t_traj_ += dt_;
         }
     }
@@ -73,9 +75,10 @@ void Trefoil::generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
     while(v > 0){
         // generate points in the Trefoil with *decreasing* velocity
         v = std::max(v - accel_*dt_, 0.0);
-        goals.push_back(createTrefoilGoal(v, -accel_, t));
-        t += dt_;
+        double omega = v/r_;
+        theta += omega*dt_;
 
+        goals.push_back(createTrefoilGoal(v, -accel_, theta));
     }
 
     // we reached zero velocity
@@ -90,24 +93,25 @@ void Trefoil::generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
     RCLCPP_INFO(logger_, "Goal vector size = %lu", goals.size());
 }
 
-snapstack_msgs2::msg::Goal Trefoil::createTrefoilGoal(double v, double accel, double t) const{
+snapstack_msgs2::msg::Goal Trefoil::createTrefoilGoal(double v, double accel, double theta) const{
     // TODO: return ref to goal to avoid copy? Same for the simpleInterpolation function
  
+
     // double v2r  = pow(v,2)/r_;
     // double v3r2 = pow(v,3)/pow(r_,2);
     // double v4r3 = pow(v,4)/pow(r_,3);
-    
+    double t = theta;
 
     snapstack_msgs2::msg::Goal goal;
     goal.header.frame_id = "world";
     goal.p.x   = cx_ + r_ * (sin(t) + 2 * sin(2*t));
-    goal.p.y   = cy_ + r_ * (cos(t) - 2 * cos(2*t));
+    goal.p.y   = cy_ + r_ * (cos(t) -2 * cos(2*t));
     goal.p.z   = alt_ + r_ * (-sin(3*t));
     goal.v.x   = r_ * (cos(t) + 4 * cos(2*t));
     goal.v.y   = r_ * (-sin(t) + 4 * sin(2*t));
-    goal.v.z   = r_ * (-3 * cos(3*t));
+    goal.v.z   = (-3 * cos(3*t));
     goal.a.x = r_ * (-sin(t) - 8 * sin(2*t)); //+ accel*c; //this accel term makes a.x discontinuous
-    goal.a.y = r_ * (-cos(t) + 8 * cos(2*t)); //+ accel*s; //this accel term makes a.y discontinuous
+    goal.a.y = r_ * (-cos(t) + 8 * cos(2*t));//+ accel*s; //this accel term makes a.y discontinuous
     goal.a.z = r_ * (9 * sin(3*t));
     goal.j.x  = 0;
     goal.j.y  = 0;
@@ -125,75 +129,50 @@ snapstack_msgs2::msg::Goal Trefoil::createTrefoilGoal(double v, double accel, do
 void Trefoil::generateStopTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
                               std::unordered_map<int,std::string>& index_msgs,
                               int& pub_index,
-                              const rclcpp::Clock::SharedPtr& clock)
-{
+                              const rclcpp::Clock::SharedPtr& clock){
+
+    // rclcpp::Time tstart = rclcpp::Time::now();
     rclcpp::Time tstart = clock->now();
 
-    const auto& current_goal = goals[pub_index];
-    Eigen::Vector3d current_pos(current_goal.p.x, current_goal.p.y, current_goal.p.z);
+    double v = sqrt(pow(goals[pub_index].v.x, 2) +
+                    pow(goals[pub_index].v.y, 2));  // 2D current (goal) vel
+    double theta = atan2(goals[pub_index].p.y - cy_,
+                         goals[pub_index].p.x - cx_);  // current (goal) angle wrt the center
 
-    // Brute-force search to estimate closest `t` on the trefoil
-    double best_t = 0.0;
-    double min_dist = 1e9;
-    for (double test_t = 0; test_t <= 6*M_PI; test_t += 0.01) {
-        double x = cx_ + r_ * (sin(test_t) + 2 * sin(2*test_t));
-        double y = cy_ + r_ * (cos(test_t) - 2 * cos(2*test_t));
-        double z = alt_ + r_ * (-sin(3*test_t));
-        Eigen::Vector3d test_pos(x, y, z);
-        double dist = (test_pos - current_pos).norm();
-        if (dist < min_dist) {
-            min_dist = dist;
-            best_t = test_t;
-        }
-    }
-
-    double v = std::sqrt(std::pow(current_goal.v.x, 2) +
-                         std::pow(current_goal.v.y, 2) +
-                         std::pow(current_goal.v.z, 2));
-
-    double t = best_t;
     std::vector<snapstack_msgs2::msg::Goal> goals_tmp;
     std::unordered_map<int,std::string> index_msgs_tmp;
 
     index_msgs_tmp[0] = "Trefoil traj: pressed END, decelerating to 0 m/s";
 
-    while (v > 0) {
-        v = std::max(v - accel_ * dt_, 0.0);
-        goals_tmp.push_back(createTrefoilGoal(v, -accel_, t));
-        t += dt_;
+    while(v > 0){
+        // generate points in the Trefoil with *decreasing* velocity
+        v = std::max(v - accel_*dt_, 0.0);
+        double omega = v/r_;
+        theta += omega*dt_;
+
+        goals_tmp.push_back(createTrefoilGoal(v, -accel_, theta));
     }
 
+    // we reached zero velocity
     index_msgs_tmp[goals_tmp.size() - 1] = "Trefoil traj: stopped";
 
     goals = std::move(goals_tmp);
     index_msgs = std::move(index_msgs_tmp);
     pub_index = 0;
 
+    // RCLCPP_INFO(logger_, "Time to calculate the braking traj (s): %f", (rclcpp::Time::now() - tstart).seconds());
     RCLCPP_INFO(logger_, "Time to calculate the braking traj (s): %f", (clock->now() - tstart).seconds());
     RCLCPP_INFO(logger_, "Goal vector size = %lu", goals.size());
 }
 
-
 bool Trefoil::trajectoryInsideBounds(double xmin, double xmax,
-                                     double ymin, double ymax,
-                                     double zmin, double zmax)
-{
-    const double t_start = 0.0;
-    const double t_end = 6 * M_PI;  // Full trefoil
-    const double t_step = 0.1;
-
-    for (double t = t_start; t <= t_end; t += t_step) {
-        double x = cx_ + r_ * (sin(t) + 2 * sin(2*t));
-        double y = cy_ + r_ * (cos(t) - 2 * cos(2*t));
-        double z = alt_ + r_ * (-sin(3*t));
-
-        if (!isPointInsideBounds(xmin, xmax, ymin, ymax, zmin, zmax,
-                                 Eigen::Vector3d(x, y, z))) {
-            return false;  // At least one point out of bounds
-        }
-    }
-    return true;
+                                    double ymin, double ymax,
+                                    double zmin, double zmax){
+  return
+      isPointInsideBounds(xmin, xmax, ymin, ymax, zmin, zmax,
+                          Eigen::Vector3d(cx_ - r_, cy_ - r_, alt_)) and
+      isPointInsideBounds(xmin, xmax, ymin, ymax, zmin, zmax,
+                          Eigen::Vector3d(cx_ + r_, cy_ + r_, alt_));
 }
-
 
 } /* namespace */
