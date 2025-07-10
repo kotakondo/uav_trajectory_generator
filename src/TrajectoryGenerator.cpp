@@ -30,22 +30,38 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <fstream>
+#include <chrono>
 
 #include <rclcpp/rclcpp.hpp>
 
 using std::placeholders::_1;
+using namespace std::chrono_literals;
 
 /*
 #include <Eigen/Eigen>
 #include <Eigen/Core>
 #include <eigen3/Eigen/Eigen>*/
 
+std::ofstream log_file("trajectory_log3.csv", std::ios::app);
+
+/*
+traj 1: 100 ms, short full cycle
+traj 2: same setting as traj 1 but saw that the 6 0's at the end means during
+    takeoff and landing 
+traj 3: 250 ms
+*/
+
 namespace trajectory_generator {
 
 TrajectoryGenerator::TrajectoryGenerator()
     : Node("trajectory_generator")
 {
-
+    if (log_file.is_open()) {
+        log_file << "time,px,py,pz,vx,vy,vz,ax,ay,az\n";
+    } else {
+        RCLCPP_WARN(this->get_logger(), "Failed to open log file for header writing");
+    }
     //QoS Profile 
     rclcpp::QoS qos_profile(10);
     qos_profile
@@ -78,6 +94,9 @@ TrajectoryGenerator::TrajectoryGenerator()
     pub_timer_ = this->create_wall_timer(
         std::chrono::duration<double>(dt_), 
         std::bind(&TrajectoryGenerator::pubCB, this));
+    position_timer_ = this->create_wall_timer(
+        250ms,
+        std::bind(&TrajectoryGenerator::log_state, this));
     pub_goal_  = this->create_publisher<snapstack_msgs2::msg::Goal>("goal", 1);  // topic, queue_size
 
     rclcpp::sleep_for(std::chrono::seconds(1));  // to ensure that the state has been received
@@ -96,6 +115,35 @@ TrajectoryGenerator::TrajectoryGenerator()
 TrajectoryGenerator::~TrajectoryGenerator()
 {
 }
+
+// for adding previous positions to history
+void TrajectoryGenerator::addP(const snapstack_msgs2::msg::Goal& goal)
+{
+    if (history.size() >= MAX_POSITIONS){
+        history.pop_front();
+    }
+    history.push_back(goal.p);
+}
+
+// timer cb for when to actually append the positions
+void TrajectoryGenerator::log_state(){
+    snapstack_msgs2::msg::Goal current_goal = goal_;
+    addP(current_goal);
+
+    if (!log_file.is_open()){
+        RCLCPP_WARN(this->get_logger(), "Log file not open. Skipping this line.");
+        return;
+    }
+
+    log_file << rclcpp::Time(current_goal.header.stamp).seconds() << ",";
+    for (const auto& entry : history) {
+        log_file << entry.x << "," << entry.y << "," << entry.z << ",";
+    }
+    log_file << current_goal.v.x << "," << current_goal.v.y << "," << current_goal.v.z << ","
+                << current_goal.a.x << "," << current_goal.a.y << "," << current_goal.a.z
+                << std::endl;
+}
+
 
 bool TrajectoryGenerator::readParameters()
 {   

@@ -12,6 +12,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <deque>
 
 #include "trajectory_generator_ros2/trajectories/Trajectory.hpp"
 
@@ -52,6 +53,15 @@ private:
    * Reads and verifies the ROS parameters.
    * @return true if successful.
    */
+
+    /// position logging
+    std::deque<geometry_msgs::msg::Point> history;
+    const size_t MAX_POSITIONS = 5;
+
+    void addP(const snapstack_msgs2::msg::Goal& goal);
+    void log_state();
+    /// position logging
+
     bool readParameters();
 
     void modeCB(const snapstack_msgs2::msg::QuadFlightMode& msg);
@@ -78,6 +88,7 @@ private:
     rclcpp::Subscription<snapstack_msgs2::msg::State>::SharedPtr subs_state_;  // "state" Subscription
     rclcpp::Publisher<snapstack_msgs2::msg::Goal>::SharedPtr pub_goal_;  // "goal" publisher
     rclcpp::TimerBase::SharedPtr pub_timer_;  // timer for pub_goal
+    rclcpp::TimerBase::SharedPtr position_timer_;
 
     // Trajectory
     std::unique_ptr<Trajectory> traj_;
