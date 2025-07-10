@@ -49,7 +49,11 @@ std::ofstream log_file("trajectory_log3.csv", std::ios::app);
 traj 1: 100 ms, short full cycle
 traj 2: same setting as traj 1 but saw that the 6 0's at the end means during
     takeoff and landing 
-traj 3: 250 ms
+traj 3: 250 ms, still not seeing much difference, also might want to change the time
+    to when the drone starts flying becuse the number is too high right now
+
+    later part of traj 3, 1000 ms, seeing changes between the history of positions, gonna try to decr ms
+    later part of traj 3, 500 ms, fixed time
 */
 
 namespace trajectory_generator {
@@ -95,7 +99,7 @@ TrajectoryGenerator::TrajectoryGenerator()
         std::chrono::duration<double>(dt_), 
         std::bind(&TrajectoryGenerator::pubCB, this));
     position_timer_ = this->create_wall_timer(
-        250ms,
+        500ms,
         std::bind(&TrajectoryGenerator::log_state, this));
     pub_goal_  = this->create_publisher<snapstack_msgs2::msg::Goal>("goal", 1);  // topic, queue_size
 
@@ -110,6 +114,7 @@ TrajectoryGenerator::TrajectoryGenerator()
     goal_.p.z = pose_.position.z;
 
     RCLCPP_INFO(this->get_logger(), "Successfully launched trajectory generator node.");
+    start_time_ = this->get_clock()->now();
 }
 
 TrajectoryGenerator::~TrajectoryGenerator()
@@ -135,7 +140,7 @@ void TrajectoryGenerator::log_state(){
         return;
     }
 
-    log_file << rclcpp::Time(current_goal.header.stamp).seconds() << ",";
+    log_file << rclcpp::Time(current_goal.header.stamp).seconds() - start_time_.seconds() << ",";
     for (const auto& entry : history) {
         log_file << entry.x << "," << entry.y << "," << entry.z << ",";
     }
