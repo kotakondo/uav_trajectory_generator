@@ -56,7 +56,8 @@ private:
 
     /// position logging
     std::deque<geometry_msgs::msg::Point> history;
-    const size_t MAX_POSITIONS = 5;
+    const size_t MAX_POSITIONS = 50; // 50 steps, 5 sec looking back
+    rclcpp::Time start_time_;
 
     void addP(const snapstack_msgs2::msg::Goal& goal);
     void log_state();

@@ -43,7 +43,7 @@ using namespace std::chrono_literals;
 #include <Eigen/Core>
 #include <eigen3/Eigen/Eigen>*/
 
-std::ofstream log_file("trajectory_log3.csv", std::ios::app);
+std::ofstream log_file("trajectory_log4.csv", std::ios::app);
 
 /*
 traj 1: 100 ms, short full cycle
@@ -99,7 +99,7 @@ TrajectoryGenerator::TrajectoryGenerator()
         std::chrono::duration<double>(dt_), 
         std::bind(&TrajectoryGenerator::pubCB, this));
     position_timer_ = this->create_wall_timer(
-        500ms,
+        100ms,
         std::bind(&TrajectoryGenerator::log_state, this));
     pub_goal_  = this->create_publisher<snapstack_msgs2::msg::Goal>("goal", 1);  // topic, queue_size
 

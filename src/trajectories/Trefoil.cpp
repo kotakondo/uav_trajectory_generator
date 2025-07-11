@@ -109,7 +109,6 @@ void Trefoil::generateTraj(std::vector<snapstack_msgs2::msg::Goal>& goals,
     RCLCPP_INFO(logger_, "Goal vector size = %lu", goals.size());
 }
 
-// Helper function removed - now using inline calculations to avoid header modification
 
 snapstack_msgs2::msg::Goal Trefoil::createTrefoilGoal(double v, double accel, double theta) const{
     double t = theta;
