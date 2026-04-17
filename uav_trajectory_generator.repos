@@ -12,7 +12,7 @@ repositories:
   behavior_selector2:
     type: git
     url: git@github.com:kotakondo/behavior_selector2.git
-    version: 600df3ce17b6fd31e474e14f0cf37bd774704f54
+    version: fac290a51f5c29fb7bba77681e09509836fdbd3b
   mission_mode:
     type: git
     url: git@github.com:kotakondo/mission_mode.git
@@ -24,4 +24,4 @@ repositories:
   ros2_px4_stack:
     type: git
     url: git@github.com:kotakondo/ros2_px4_stack.git
-    version: ac492d855f2a8b3a272810f8b3677f10c9cfc986
+    version: 0686b73166286a608961bf54857651b92744119a
