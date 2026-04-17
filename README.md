@@ -1,5 +1,14 @@
 # uav_trajectory_generator (`trajectory_generator_ros2`)
 
+## Figure-8 SITL demo
+
+https://github.com/kotakondo/uav_trajectory_generator/releases/download/v0.1-demo/uav_trajectory_generator_figure8_sim.mp4
+
+PX4 SITL + Gazebo Classic (iris) flying the figure-8 produced by this
+package. Follow the instructions below to reproduce it locally.
+
+## Overview
+
 ROS 2 port of ACL's trajectory generator. The node publishes smooth
 `snapstack_msgs2/Goal` trajectories (Circle, Figure8, Square, Rectangle, Line,
 Boomerang, Reciprocating, Bounce, T, I, M) that a MAVROS-based offboard
