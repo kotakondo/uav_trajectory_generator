@@ -97,56 +97,11 @@ TrajectoryGenerator::~TrajectoryGenerator()
 }
 
 bool TrajectoryGenerator::readParameters()
-{   
-    // First declare parameters (new on ROS2)
+{
+    // Shared params (flat at the top of the YAML).
     this->declare_parameter("alt", 0.0);
     this->declare_parameter("pub_freq", 0.0);
     this->declare_parameter("traj_type", "");
-
-    // T trajectory params
-    this->declare_parameter("T_length", 0.0);  // height of the T (vertical)
-    this->declare_parameter("T_width", 0.0);   // width of the T (horizontal)
-
-    // I trajectory params
-    this->declare_parameter("I_length", 0.0);  // height of the I (vertical)
-    this->declare_parameter("I_width", 0.0);   // width of the I (horizontal)
-
-    // M trajectory params
-    this->declare_parameter("M_length", 0.0);
-    this->declare_parameter("M_width", 0.0);
-
-    //Bounce params 
-    this->declare_parameter("Az", 0.0);  // Altitude at the top of the bounce
-    this->declare_parameter("Bz", 0.0);
-
-    // Square params
-    this->declare_parameter("side_length", 0.0);
-    this->declare_parameter("orientation", 0.0);
-    this->declare_parameter("square_accel", 0.0);
-
-    // Rectangle params
-    this->declare_parameter("side_a", 0.0);
-    this->declare_parameter("side_b", 0.0);
-    this->declare_parameter("rectangle_accel", 0.0);
-    
-    // Circle params
-    this->declare_parameter("r", 0.0);
-    this->declare_parameter("center_x", 0.0);
-    this->declare_parameter("center_y", 0.0);
-    this->declare_parameter<std::vector<float>>("v_goals", {0.0, 0.0, 0.0, 0.0, 0.0});
-    this->declare_parameter("t_traj", 0.0);
-    this->declare_parameter("circle_accel", 0.0);
-    
-    // Line params
-    this->declare_parameter("Ax", 0.0);
-    this->declare_parameter("Ay", 0.0);
-    this->declare_parameter("Bx", 0.0);
-    this->declare_parameter("By", 0.0);
-    this->declare_parameter("v_line", 0.0);
-    this->declare_parameter("line_accel", 0.0);
-    this->declare_parameter("line_decel", 0.0);
-
-    // Other params
     this->declare_parameter("vel_initpos", 0.0);
     this->declare_parameter("vel_take", 0.0);
     this->declare_parameter("vel_land_fast", 0.0);
@@ -154,8 +109,6 @@ bool TrajectoryGenerator::readParameters()
     this->declare_parameter("vel_yaw", 0.0);
     this->declare_parameter("dist_thresh", 0.0);
     this->declare_parameter("yaw_thresh", 0.0);
-
-    // Bounds
     this->declare_parameter("margin_takeoff_outside_bounds", 0.0);
     this->declare_parameter("x_min", 0.0);
     this->declare_parameter("x_max", 0.0);
@@ -164,226 +117,193 @@ bool TrajectoryGenerator::readParameters()
     this->declare_parameter("z_min", 0.0);
     this->declare_parameter("z_max", 0.0);
 
-    // RCLCPP_INFO(this->get_logger(), this->get_parameter("alt", alt_) ? "true" : "false");
     if (!this->get_parameter("alt", alt_)) return false;
     double freq;
-
     if (!this->get_parameter("pub_freq", freq)) return false;
-    dt_ = 1.0/freq;
-    
+    dt_ = 1.0 / freq;
+
     std::string traj_type;
     if (!this->get_parameter("traj_type", traj_type)) return false;
-    if(traj_type == "Circle"){
-        // circular trajectory parameters
+
+    // Per-trajectory params live in YAML under a block keyed by traj_type,
+    // e.g. Figure8.r, Square.side_length, Line.Ax, etc. Only the selected
+    // block is declared/read so the YAML can carry unused defaults for
+    // trajectories we aren't flying this run.
+    const std::string p = traj_type + ".";
+
+    auto declare = [&](const std::string& key, double def) {
+        this->declare_parameter(p + key, def);
+    };
+    auto declare_v = [&](const std::string& key) {
+        this->declare_parameter<std::vector<double>>(p + key, {});
+    };
+    auto get_d = [&](const std::string& key, double& out) -> bool {
+        return this->get_parameter(p + key, out);
+    };
+    auto get_v = [&](const std::string& key, std::vector<double>& out) -> bool {
+        return this->get_parameter(p + key, out);
+    };
+    auto check_v_goals = [&](const std::vector<double>& v) -> bool {
+        for (double vel : v) {
+            if (vel <= 0) {
+                RCLCPP_ERROR(this->get_logger(), "All velocities must be > 0");
+                return false;
+            }
+        }
+        return true;
+    };
+
+    if (traj_type == "Circle" || traj_type == "Figure8") {
+        declare("r", 0.0);
+        declare("center_x", 0.0);
+        declare("center_y", 0.0);
+        declare_v("v_goals");
+        declare("t_traj", 0.0);
+        declare("circle_accel", 0.0);
+
         double r, cx, cy, t_traj, circle_accel;
         std::vector<double> v_goals;
-        if (!this->get_parameter("r", r)) return false;
-        if (!this->get_parameter("center_x", cx)) return false;
-        if (!this->get_parameter("center_y", cy)) return false;
-        if (!this->get_parameter("v_goals", v_goals)) return false;
-        for(double vel : v_goals){
-            if(vel <= 0){
-                RCLCPP_ERROR(this->get_logger(), "All velocities must be > 0");
-                return false;
-            }
-        }
-        if (!this->get_parameter("t_traj", t_traj)) return false;
-        if (!this->get_parameter("circle_accel", circle_accel)) return false;
-        if (circle_accel <= 0){
-            RCLCPP_ERROR(this->get_logger(), "accel must be > 0");
-            return false;
-        }
-        traj_ = std::make_unique<Circle>(alt_, r, cx, cy, v_goals, t_traj, circle_accel, dt_);
+        if (!get_d("r", r)) return false;
+        if (!get_d("center_x", cx)) return false;
+        if (!get_d("center_y", cy)) return false;
+        if (!get_v("v_goals", v_goals)) return false;
+        if (!check_v_goals(v_goals)) return false;
+        if (!get_d("t_traj", t_traj)) return false;
+        if (!get_d("circle_accel", circle_accel)) return false;
+        if (circle_accel <= 0) { RCLCPP_ERROR(this->get_logger(), "accel must be > 0"); return false; }
+
+        if (traj_type == "Circle")
+            traj_ = std::make_unique<Circle>(alt_, r, cx, cy, v_goals, t_traj, circle_accel, dt_);
+        else
+            traj_ = std::make_unique<Figure8>(alt_, r, cx, cy, v_goals, t_traj, circle_accel, dt_);
     }
-    else if(traj_type == "Figure8"){
-        // circular trajectory parameters
-        double r, cx, cy, t_traj, circle_accel;
+    else if (traj_type == "Square" || traj_type == "Rectangle") {
+        declare("center_x", 0.0);
+        declare("center_y", 0.0);
+        declare("orientation", 0.0);
+        declare_v("v_goals");
+        declare("t_traj", 0.0);
+
+        double cx, cy, orientation, t_traj;
         std::vector<double> v_goals;
-        if (!this->get_parameter("r", r)) return false;
-        if (!this->get_parameter("center_x", cx)) return false;
-        if (!this->get_parameter("center_y", cy)) return false;
-        if (!this->get_parameter("v_goals", v_goals)) return false;
-        for(double vel : v_goals){
-            if(vel <= 0){
-                RCLCPP_ERROR(this->get_logger(), "All velocities must be > 0");
-                return false;
-            }
-        }
-        if (!this->get_parameter("t_traj", t_traj)) return false;
-        if (!this->get_parameter("circle_accel", circle_accel)) return false;
-        if (circle_accel <= 0){
-            RCLCPP_ERROR(this->get_logger(), "accel must be > 0");
-            return false;
-        }
-        traj_ = std::make_unique<Figure8>(alt_, r, cx, cy, v_goals, t_traj, circle_accel, dt_);
-    }
-    else if(traj_type == "Square" || traj_type == "Rectangle"){
-        double cx, cy, orientation, t_traj, accel;
-        std::vector<double> v_goals;
-        RCLCPP_INFO(this->get_logger(), "Reading %s trajectory parameters...", traj_type.c_str());
-        if (!this->get_parameter("center_x", cx)) return false;
-        if (!this->get_parameter("center_y", cy)) return false;
-        if (!this->get_parameter("orientation", orientation)) return false;
-        if (!this->get_parameter("v_goals", v_goals)) return false;
-        for(double vel : v_goals){
-            if(vel <= 0){
-                RCLCPP_ERROR(this->get_logger(), "All velocities must be > 0");
-                return false;
-            }
-        }
-        if (!this->get_parameter("t_traj", t_traj)) return false;
+        if (!get_d("center_x", cx)) return false;
+        if (!get_d("center_y", cy)) return false;
+        if (!get_d("orientation", orientation)) return false;
+        if (!get_v("v_goals", v_goals)) return false;
+        if (!check_v_goals(v_goals)) return false;
+        if (!get_d("t_traj", t_traj)) return false;
 
         if (traj_type == "Square") {
+            declare("side_length", 0.0);
+            declare("square_accel", 0.0);
             double side_length, square_accel;
-            if (!this->get_parameter("side_length", side_length)) return false;
-            if (!this->get_parameter("square_accel", square_accel)) return false;
-            if (square_accel <= 0){
-                RCLCPP_ERROR(this->get_logger(), "accel must be > 0");
-                return false;
-            }
-            RCLCPP_INFO(this->get_logger(), "Square params: side_length=%f, center_x=%f, center_y=%f, orientation=%f, v_goals[0]=%f, t_traj=%f, square_accel=%f",
-                side_length, cx, cy, orientation, v_goals.empty() ? -1.0 : v_goals[0], t_traj, square_accel);
+            if (!get_d("side_length", side_length)) return false;
+            if (!get_d("square_accel", square_accel)) return false;
+            if (square_accel <= 0) { RCLCPP_ERROR(this->get_logger(), "accel must be > 0"); return false; }
             traj_ = std::make_unique<Square>(alt_, side_length, cx, cy, orientation, v_goals, t_traj, square_accel, dt_);
-        } else { // Rectangle
+        } else {
+            declare("side_a", 0.0);
+            declare("side_b", 0.0);
+            declare("rectangle_accel", 0.0);
             double side_a, side_b, rectangle_accel;
-            if (!this->get_parameter("side_a", side_a)) return false;
-            if (!this->get_parameter("side_b", side_b)) return false;
-            if (!this->get_parameter("rectangle_accel", rectangle_accel)) return false;
-            if (rectangle_accel <= 0){
-                RCLCPP_ERROR(this->get_logger(), "accel must be > 0");
-                return false;
-            }
-            RCLCPP_INFO(this->get_logger(), "Rectangle params: side_a=%f, side_b=%f, center_x=%f, center_y=%f, orientation=%f, v_goals[0]=%f, t_traj=%f, rectangle_accel=%f",
-                side_a, side_b, cx, cy, orientation, v_goals.empty() ? -1.0 : v_goals[0], t_traj, rectangle_accel);
+            if (!get_d("side_a", side_a)) return false;
+            if (!get_d("side_b", side_b)) return false;
+            if (!get_d("rectangle_accel", rectangle_accel)) return false;
+            if (rectangle_accel <= 0) { RCLCPP_ERROR(this->get_logger(), "accel must be > 0"); return false; }
             traj_ = std::make_unique<Rectangle>(alt_, side_a, side_b, cx, cy, orientation, v_goals, t_traj, rectangle_accel, dt_);
         }
     }
-    else if(traj_type == "Line" || traj_type == "Boomerang" || traj_type == "Reciprocating"){
-        double Ax, Ay, Bx, By, v_line, a1, a3, t_traj;
-        if (!this->get_parameter("Ax", Ax)) return false;
-        if (!this->get_parameter("Ay", Ay)) return false;
-        if (!this->get_parameter("Bx", Bx)) return false;
-        if (!this->get_parameter("By", By)) return false;
-        if (!this->get_parameter("v_line", v_line)) return false;
-        if(v_line <= 0){
-            RCLCPP_ERROR(this->get_logger(), "The velocity must be > 0");
-            return false;
-        }
-        if (!this->get_parameter("line_accel", a1)) return false;
-        if (!this->get_parameter("line_decel", a3)) return false;
-        if (a1 <= 0 or a3 <= 0){
-            RCLCPP_ERROR(this->get_logger(), "accel and decel must be > 0");
-            return false;
-        }
-        std::vector<double> v_goals; v_goals.push_back(v_line);
+    else if (traj_type == "Line" || traj_type == "Boomerang" || traj_type == "Reciprocating") {
+        declare("Ax", 0.0);
+        declare("Ay", 0.0);
+        declare("Bx", 0.0);
+        declare("By", 0.0);
+        declare("v_line", 0.0);
+        declare("line_accel", 0.0);
+        declare("line_decel", 0.0);
 
-        if (traj_type == "Line"){
+        double Ax, Ay, Bx, By, v_line, a1, a3;
+        if (!get_d("Ax", Ax)) return false;
+        if (!get_d("Ay", Ay)) return false;
+        if (!get_d("Bx", Bx)) return false;
+        if (!get_d("By", By)) return false;
+        if (!get_d("v_line", v_line)) return false;
+        if (v_line <= 0) { RCLCPP_ERROR(this->get_logger(), "velocity must be > 0"); return false; }
+        if (!get_d("line_accel", a1)) return false;
+        if (!get_d("line_decel", a3)) return false;
+        if (a1 <= 0 || a3 <= 0) { RCLCPP_ERROR(this->get_logger(), "accel/decel must be > 0"); return false; }
+
+        std::vector<double> v_goals = {v_line};
+
+        if (traj_type == "Line") {
             traj_ = std::make_unique<Line>(alt_, Eigen::Vector3d(Ax, Ay, alt_),
-                                       Eigen::Vector3d(Bx, By, alt_),
-                                       v_goals, a1, a3, dt_);
-        } 
-        else if (traj_type == "Boomerang") {
+                                           Eigen::Vector3d(Bx, By, alt_),
+                                           v_goals, a1, a3, dt_);
+        } else if (traj_type == "Boomerang") {
             traj_ = std::make_unique<Boomerang>(alt_, Eigen::Vector3d(Ax, Ay, alt_),
-                                       Eigen::Vector3d(Bx, By, alt_),
-                                       v_goals, a1, a3, dt_);
-        }
-        else if (traj_type == "Reciprocating") {
-            if (!this->get_parameter("t_traj", t_traj)) return false;
+                                                Eigen::Vector3d(Bx, By, alt_),
+                                                v_goals, a1, a3, dt_);
+        } else {  // Reciprocating
+            declare("t_traj", 0.0);
+            double t_traj;
+            if (!get_d("t_traj", t_traj)) return false;
             traj_ = std::make_unique<Reciprocating>(alt_, Eigen::Vector3d(Ax, Ay, alt_),
-                                       Eigen::Vector3d(Bx, By, alt_),
-                                       v_goals, a1, a3, t_traj, dt_);
+                                                    Eigen::Vector3d(Bx, By, alt_),
+                                                    v_goals, a1, a3, t_traj, dt_);
         }
     }
-    else if(traj_type == "Bounce"){
+    else if (traj_type == "Bounce") {
+        declare("center_x", 0.0);
+        declare("center_y", 0.0);
+        declare("Az", 0.0);
+        declare("Bz", 0.0);
+        declare("orientation", 0.0);
+        declare_v("v_goals");
+        declare("t_traj", 0.0);
+
         double cx, cy, Az, Bz, orientation, t_traj;
         std::vector<double> v_goals;
-        if (!this->get_parameter("center_x", cx)) return false;
-        if (!this->get_parameter("center_y", cy)) return false;
-        if (!this->get_parameter("Az", Az)) return false;
-        if (!this->get_parameter("Bz", Bz)) return false;
-        if (!this->get_parameter("orientation", orientation)) return false;
-        if (!this->get_parameter("v_goals", v_goals)) return false;
-        for(double vel : v_goals){
-            if(vel <= 0){
-                RCLCPP_ERROR(this->get_logger(), "All velocities must be > 0");
-                return false;
-            }
-        }
-        if (!this->get_parameter("t_traj", t_traj)) return false;
-
-        RCLCPP_INFO(this->get_logger(), "Bounce params: center_x=%f, center_y=%f, Az=%f, Bz=%f, orientation=%f, v_goals[0]=%f, t_traj=%f",
-            cx, cy, Az, Bz, orientation, v_goals.empty() ? -1.0 : v_goals[0], t_traj);
+        if (!get_d("center_x", cx)) return false;
+        if (!get_d("center_y", cy)) return false;
+        if (!get_d("Az", Az)) return false;
+        if (!get_d("Bz", Bz)) return false;
+        if (!get_d("orientation", orientation)) return false;
+        if (!get_v("v_goals", v_goals)) return false;
+        if (!check_v_goals(v_goals)) return false;
+        if (!get_d("t_traj", t_traj)) return false;
 
         traj_ = std::make_unique<Bounce>(cx, cy, Az, Bz, v_goals, t_traj, orientation, dt_);
     }
-    else if(traj_type == "M"){
-        double cx, cy, M_length, M_width, t_traj, orientation;
+    else if (traj_type == "M" || traj_type == "I" || traj_type == "T") {
+        const std::string dim = traj_type + "_";  // "M_", "I_", "T_"
+        declare("center_x", 0.0);
+        declare("center_y", 0.0);
+        declare(dim + "length", 0.0);
+        declare(dim + "width", 0.0);
+        declare("orientation", 0.0);
+        declare_v("v_goals");
+        declare("t_traj", 0.0);
+
+        double cx, cy, length, width, t_traj, orientation;
         std::vector<double> v_goals;
-        if (!this->get_parameter("center_x", cx)) return false;
-        if (!this->get_parameter("center_y", cy)) return false;
-        if (!this->get_parameter("M_length", M_length)) return false;
-        if (!this->get_parameter("M_width", M_width)) return false;
-        if (!this->get_parameter("v_goals", v_goals)) return false;
-        for(double vel : v_goals){
-            if(vel <= 0){
-                RCLCPP_ERROR(this->get_logger(), "All velocities must be > 0");
-                return false;
-            }
-        }
-        if (!this->get_parameter("t_traj", t_traj)) return false;
-        if (!this->get_parameter("orientation", orientation)) return false;
+        if (!get_d("center_x", cx)) return false;
+        if (!get_d("center_y", cy)) return false;
+        if (!get_d(dim + "length", length)) return false;
+        if (!get_d(dim + "width", width)) return false;
+        if (!get_v("v_goals", v_goals)) return false;
+        if (!check_v_goals(v_goals)) return false;
+        if (!get_d("t_traj", t_traj)) return false;
+        if (!get_d("orientation", orientation)) return false;
 
-        RCLCPP_INFO(this->get_logger(), "M params: center_x=%f, center_y=%f, M_length=%f, M_width=%f, v_goals[0]=%f, t_traj=%f, orientation=%f",
-            cx, cy, M_length, M_width, v_goals.empty() ? -1.0 : v_goals[0], t_traj, orientation);
-
-        traj_ = std::make_unique<M>(cx, cy, M_length, M_width, alt_, v_goals, t_traj, orientation, dt_);
+        if (traj_type == "M")
+            traj_ = std::make_unique<M>(cx, cy, length, width, alt_, v_goals, t_traj, orientation, dt_);
+        else if (traj_type == "I")
+            traj_ = std::make_unique<I>(cx, cy, length, width, alt_, v_goals, t_traj, orientation, dt_);
+        else
+            traj_ = std::make_unique<T>(cx, cy, length, width, alt_, v_goals, t_traj, orientation, dt_);
     }
-    else if(traj_type == "I"){
-        double cx, cy, I_length, I_width, t_traj, orientation;
-        std::vector<double> v_goals;
-        if (!this->get_parameter("center_x", cx)) return false;
-        if (!this->get_parameter("center_y", cy)) return false;
-        if (!this->get_parameter("I_length", I_length)) return false;
-        if (!this->get_parameter("I_width", I_width)) return false;
-        if (!this->get_parameter("v_goals", v_goals)) return false;
-        for(double vel : v_goals){
-            if(vel <= 0){
-                RCLCPP_ERROR(this->get_logger(), "All velocities must be > 0");
-                return false;
-            }
-        }
-        if (!this->get_parameter("t_traj", t_traj)) return false;
-        if (!this->get_parameter("orientation", orientation)) return false;
-
-        RCLCPP_INFO(this->get_logger(), "I params: center_x=%f, center_y=%f, I_length=%f, I_width=%f, v_goals[0]=%f, t_traj=%f, orientation=%f",
-            cx, cy, I_length, I_width, v_goals.empty() ? -1.0 : v_goals[0], t_traj, orientation);
-
-        traj_ = std::make_unique<I>(cx, cy, I_length, I_width, alt_, v_goals, t_traj, orientation, dt_);
-    }
-    else if(traj_type == "T"){
-        double cx, cy, T_length, T_width, t_traj, orientation;
-        std::vector<double> v_goals;
-        if (!this->get_parameter("center_x", cx)) return false;
-        if (!this->get_parameter("center_y", cy)) return false;
-        if (!this->get_parameter("T_length", T_length)) return false;
-        if (!this->get_parameter("T_width", T_width)) return false;
-        if (!this->get_parameter("v_goals", v_goals)) return false;
-        for(double vel : v_goals){
-            if(vel <= 0){
-                RCLCPP_ERROR(this->get_logger(), "All velocities must be > 0");
-                return false;
-            }
-        }
-        if (!this->get_parameter("t_traj", t_traj)) return false;
-        if (!this->get_parameter("orientation", orientation)) return false;
-
-        RCLCPP_INFO(this->get_logger(), "T params: center_x=%f, center_y=%f, T_length=%f, T_width=%f, v_goals[0]=%f, t_traj=%f, orientation=%f",
-            cx, cy, T_length, T_width, v_goals.empty() ? -1.0 : v_goals[0], t_traj, orientation);
-
-        traj_ = std::make_unique<T>(cx, cy, T_length, T_width, alt_, v_goals, t_traj, orientation, dt_);
-    }
-    else{
-        RCLCPP_ERROR(this->get_logger(), "Trajectory type not valid.");
+    else {
+        RCLCPP_ERROR(this->get_logger(), "Trajectory type '%s' not valid.", traj_type.c_str());
         return false;
     }
 
