@@ -2,11 +2,11 @@
 
 ## Figure-8 SITL demo
 
-<video src="https://github.com/kotakondo/uav_trajectory_generator/releases/download/v0.1-demo/uav_trajectory_generator_figure8_sim.mp4" controls width="720"></video>
+https://github.com/user-attachments/assets/8b980866-85d8-44ee-91a5-5b93790eceba
 
 PX4 SITL + Gazebo Classic (iris) flying the figure-8 produced by this
-package. Follow the instructions below to reproduce it locally. If the
-player doesn't load in your browser, grab the file directly from the
+package. Follow the instructions below to reproduce it locally. A raw
+download of the same clip is also attached to the
 [v0.1-demo release](https://github.com/kotakondo/uav_trajectory_generator/releases/tag/v0.1-demo).
 
 ## Overview
