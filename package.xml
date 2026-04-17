@@ -14,7 +14,7 @@
   <depend>eigen</depend>
   <!--<depend>boost</depend>-->
   <depend>rclcpp</depend>
-  <depend>snapstack_msgs</depend>
+  <depend>snapstack_msgs2</depend>
   <depend>geometry_msgs</depend>
 
   <export>

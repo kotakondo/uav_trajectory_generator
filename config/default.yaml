@@ -6,7 +6,7 @@ SQ01:
       pub_freq: 100.0  # Hz
 
       # Type of trajectory
-      traj_type: T # Circle , Line , Boomerang , Figure8, Square, Reciprocating, Rectangle, Bounce, M, I, T
+      traj_type: Figure8 # Circle , Line , Boomerang , Figure8, Square, Reciprocating, Rectangle, Bounce, M, I, T
 
       # T trajectory parameters
       T_length: 3.0   # height of the T (vertical)
