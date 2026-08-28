@@ -17,6 +17,7 @@
 #include "trajectory_generator_ros2/trajectories/M.hpp"
 #include "trajectory_generator_ros2/trajectories/I.hpp"
 #include "trajectory_generator_ros2/trajectories/T.hpp"
+#include "trajectory_generator_ros2/trajectories/Csv.hpp"
 
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
@@ -301,6 +302,20 @@ bool TrajectoryGenerator::readParameters()
             traj_ = std::make_unique<I>(cx, cy, length, width, alt_, v_goals, t_traj, orientation, dt_);
         else
             traj_ = std::make_unique<T>(cx, cy, length, width, alt_, v_goals, t_traj, orientation, dt_);
+    }
+    else if (traj_type == "Csv") {
+        this->declare_parameter(p + "csv_path", std::string(""));
+        declare("stop_accel", 3.0);
+
+        std::string csv_path;
+        if (!this->get_parameter(p + "csv_path", csv_path) || csv_path.empty()) {
+            RCLCPP_ERROR(this->get_logger(), "Csv.csv_path must be set.");
+            return false;
+        }
+        double stop_accel;
+        if (!get_d("stop_accel", stop_accel)) return false;
+
+        traj_ = std::make_unique<Csv>(csv_path, stop_accel, dt_);
     }
     else {
         RCLCPP_ERROR(this->get_logger(), "Trajectory type '%s' not valid.", traj_type.c_str());

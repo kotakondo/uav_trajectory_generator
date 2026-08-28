@@ -56,6 +56,7 @@ add_library(${PROJECT_NAME}_core
   src/trajectories/M.cpp
   src/trajectories/I.cpp
   src/trajectories/T.cpp
+  src/trajectories/Csv.cpp
 )
 
 # ROS2:
@@ -130,6 +131,11 @@ install (
 install (
   DIRECTORY config/
   DESTINATION share/${PROJECT_NAME}/config
+)
+
+install (
+  DIRECTORY ref_traj/
+  DESTINATION share/${PROJECT_NAME}/ref_traj
 )
 
 # Export for downstream users

@@ -9,9 +9,9 @@ SQ01:
 
       # Which trajectory to fly. Each name below has its own block of
       # parameters; only the selected block is read at startup.
-      traj_type: Figure8
+      traj_type: Csv
       # Options: Circle | Figure8 | Square | Rectangle | Line | Boomerang |
-      #          Reciprocating | Bounce | M | I | T
+      #          Reciprocating | Bounce | M | I | T | Csv
 
       # ====================================================================
       # Per-trajectory blocks — edit only the one you are flying
@@ -135,6 +135,17 @@ SQ01:
         orientation: 0.0    # [rad]
         v_goals:     [1.0]  # [m/s]
         t_traj:     30.0    # [s]
+
+      # --- Csv: replay a pre-generated trajectory from a CSV of Goal rows ---
+      # CSV header: t,x,y,z,vx,vy,vz,ax,ay,az,jx,jy,jz,yaw,dyaw,power,mode_xy,mode_z
+      # csv_path is normally set by onboard.launch.py (defaults to the bundled
+      # file under <pkg>/ref_traj); override with csv_path:=/abs/path.csv.
+      # NOTE: set pub_freq above to the CSV's sample rate (e.g. 100 Hz for dt=0.01)
+      # for real-time playback. Takeoff and the flight to the CSV's first point
+      # are handled automatically by the takeoff/INIT_POS_TRAJ states.
+      Csv:
+        csv_path:   ""    # absolute path; empty -> launch file fills the default
+        stop_accel: 3.0   # [m/s^2] deceleration used if END is pressed mid-trajectory
 
       # ====================================================================
       # Takeoff / landing / mode-transition speeds (all shared)
